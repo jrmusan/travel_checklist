@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ProgressBar } from '../components/ProgressCard'
+import { CheckAll } from '../components/CheckAll'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { ArtIcon } from '../components/icons/ArtIcon'
 import { UiIcon } from '../components/icons/UiIcon'
@@ -15,6 +16,7 @@ interface ChecklistScreenProps {
   items: MasterItem[]
   checkedIds: Set<string>
   onToggle: (itemId: string) => void
+  onSetChecked: (itemIds: string[], checked: boolean) => void
   onBack: () => void
   onStartTrip: () => void
   packFilter: PackFilter
@@ -31,6 +33,7 @@ export function ChecklistScreen({
   items,
   checkedIds,
   onToggle,
+  onSetChecked,
   onBack,
   onStartTrip,
   packFilter,
@@ -80,7 +83,7 @@ export function ChecklistScreen({
           return true
         })
         const packedCount = all.filter((i) => checkedIds.has(i.id)).length
-        return { cat, visible, total: all.length, packedCount, ...categoryArt(cat) }
+        return { cat, all, visible, total: all.length, packedCount, ...categoryArt(cat) }
       })
       .filter((s) => s.visible.length > 0)
   }, [categories, categoryFilter, itemsByCategory, normalizedQuery, packFilter, checkedIds])
@@ -172,7 +175,7 @@ export function ChecklistScreen({
             </p>
           </div>
         ) : (
-          sections.map(({ cat, visible, total: catTotal, packedCount, art }) => {
+          sections.map(({ cat, all, visible, total: catTotal, packedCount, art }) => {
             const expanded = isExpanded(cat.id)
             const headerId = `category-header-${cat.id}`
             const panelId = `category-panel-${cat.id}`
@@ -181,6 +184,13 @@ export function ChecklistScreen({
             return (
               <section key={cat.id} className="card category-card">
                 <h2 className="category-heading">
+                  <CheckAll
+                    label={categoryLabel(cat)}
+                    packed={packedCount}
+                    total={catTotal}
+                    disabled={disabled}
+                    onChange={(checked) => onSetChecked(all.map((i) => i.id), checked)}
+                  />
                   <button
                     type="button"
                     className="category-toggle"

@@ -13,7 +13,13 @@ import { ChecklistScreen } from './screens/ChecklistScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { TripsScreen } from './screens/TripsScreen'
-import { endTrip, itemsForTripType, startTrip, toggleItemChecked } from './store/trip-actions'
+import {
+  endTrip,
+  itemsForTripType,
+  setItemsChecked,
+  startTrip,
+  toggleItemChecked,
+} from './store/trip-actions'
 import { listTripTypes } from './trip-types/registry'
 import type { PackFilter, TripInstance, TripTypeId } from './types'
 
@@ -125,6 +131,15 @@ function App() {
     update((s) => toggleItemChecked(s, activeForSelected.id, itemId))
   }
 
+  const handleSetChecked = (itemIds: string[], checked: boolean) => {
+    if (!activeForSelected) return
+    const newlyPacked = checked ? itemIds.filter((id) => !checkedIds.has(id)).length : 0
+    if (newlyPacked > 0 && packed + newlyPacked === items.length) {
+      setShowComplete(true)
+    }
+    update((s) => setItemsChecked(s, activeForSelected.id, itemIds, checked))
+  }
+
   let screen
   switch (view) {
     case 'checklist':
@@ -136,6 +151,7 @@ function App() {
           items={items}
           checkedIds={checkedIds}
           onToggle={handleToggle}
+          onSetChecked={handleSetChecked}
           onBack={() => navigate('home')}
           onStartTrip={() => setSheetOpen(true)}
           packFilter={packFilter}

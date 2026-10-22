@@ -63,6 +63,28 @@ export function toggleItemChecked(
   }
 }
 
+/** Checks or unchecks a batch of items in one state change (one debounced save). */
+export function setItemsChecked(
+  state: PersistedState,
+  tripId: string,
+  itemIds: string[],
+  checked: boolean,
+): PersistedState {
+  const progress = state.progressByTripId[tripId] ?? createEmptyProgress()
+  const set = new Set(progress.checkedItemIds)
+  for (const id of itemIds) {
+    if (checked) set.add(id)
+    else set.delete(id)
+  }
+  return {
+    ...state,
+    progressByTripId: {
+      ...state.progressByTripId,
+      [tripId]: { checkedItemIds: [...set] },
+    },
+  }
+}
+
 export function itemsForTripType(state: PersistedState, tripTypeId: TripTypeId) {
   const categories = state.masterPool.categories
     .filter((c) => c.tripTypeId === tripTypeId)

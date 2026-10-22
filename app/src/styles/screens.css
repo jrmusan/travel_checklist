@@ -279,17 +279,71 @@
 }
 
 .category-heading {
+  display: flex;
+  align-items: center;
+  padding-left: 6px;
   font-size: inherit;
 }
 
 .category-toggle {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 12px;
-  width: 100%;
   min-height: 60px;
-  padding: 10px 14px 10px 12px;
+  padding: 10px 14px 10px 4px;
   text-align: left;
+}
+
+/* 44px target whose circle lines up with the item check circles below. */
+.check-all {
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.check-all:active {
+  background: var(--surface-2);
+}
+
+.check-all:has(input:focus-visible) {
+  outline: 3px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: -3px;
+}
+
+.check-all:has(input:disabled) {
+  cursor: default;
+}
+
+.check-all:has(input:disabled) .check-circle {
+  opacity: 0.45;
+}
+
+.check-all[data-state='all'] .check-circle {
+  background: var(--check);
+  border-color: var(--check);
+}
+
+.check-all[data-state='all'] .check-circle svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.check-all[data-state='partial'] .check-circle {
+  border-color: var(--check);
+  background: color-mix(in srgb, var(--check) 14%, transparent);
+}
+
+.check-dash {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--check);
 }
 
 .category-art {
