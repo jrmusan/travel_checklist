@@ -1,0 +1,16 @@
+{
+  "name": "CampList — trip packing checklist",
+  "short_name": "CampList",
+  "description": "Shared packing checklist for camping trips. Pack less worry, more adventure.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3ead9",
+  "theme_color": "#1f3326",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

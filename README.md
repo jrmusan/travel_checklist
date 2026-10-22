@@ -78,6 +78,18 @@ npm run dev
 
 Vite runs on [http://localhost:5173](http://localhost:5173) and proxies `/api` to port 3000 — you still need `vercel dev` on 3000 or auth will fail.
 
+**UI with a mock API (no database)**
+
+```bash
+cd app
+npm run mock-api   # in-memory stand-in for /api on port 3000
+npm run dev        # in a second terminal
+```
+
+Accounts and trips live in memory and reset when `mock-api` stops. Handy for styling work and phone-sized screenshots.
+
+**Styling:** the CampList look lives in `app/src/styles/` — `tokens.css` (Forest / Sunset / Night theme variables), `base.css`, `components.css`, `screens.css`. Illustrations are compressed webp files in `app/src/assets/scenes/`; icons are inline SVG in `app/src/components/icons/`.
+
 **Production build**
 
 ```bash

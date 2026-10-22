@@ -44,5 +44,9 @@ export function useCategoryExpanded(categoryIds: string[]) {
     }))
   }, [])
 
-  return { isExpanded, toggleExpanded }
+  const expand = useCallback((categoryId: string) => {
+    setExpandedById((prev) => (prev[categoryId] === false ? { ...prev, [categoryId]: true } : prev))
+  }, [])
+
+  return { isExpanded, toggleExpanded, expand }
 }
