@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ProgressBar } from '../components/ProgressCard'
 import { CheckAll } from '../components/CheckAll'
 import { ConfirmRemoveSheet, ItemSheet } from '../components/ItemSheet'
+import { RefreshButton } from '../components/RefreshButton'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { ArtIcon } from '../components/icons/ArtIcon'
 import { UiIcon } from '../components/icons/UiIcon'
@@ -22,6 +23,8 @@ interface ChecklistScreenProps {
   onUpdateItem: (itemId: string, input: { label: string; categoryId: string }) => string | null
   onRemoveItem: (itemId: string) => void
   onFlushSave: () => void
+  onRefresh: () => void
+  refreshing?: boolean
   onBack: () => void
   onStartTrip: () => void
   packFilter: PackFilter
@@ -43,6 +46,8 @@ export function ChecklistScreen({
   onUpdateItem,
   onRemoveItem,
   onFlushSave,
+  onRefresh,
+  refreshing,
   onBack,
   onStartTrip,
   packFilter,
@@ -147,7 +152,12 @@ export function ChecklistScreen({
 
   return (
     <div className="screen screen--checklist">
-      <ScreenHeader title={heading} subtitle={subtitle} onBack={onBack}>
+      <ScreenHeader
+        title={heading}
+        subtitle={subtitle}
+        onBack={onBack}
+        action={<RefreshButton onClick={onRefresh} busy={refreshing} />}
+      >
         <div className="header-progress">
           <ProgressBar pct={activeTrip ? pct : 0} tone="light" />
           <span>{activeTrip ? `${packed} / ${total}` : `${total} items`}</span>

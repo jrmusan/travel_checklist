@@ -13,6 +13,23 @@ export function newCustomItemId(categoryId: string): string {
   return `${categoryId}:custom:${crypto.randomUUID()}`
 }
 
+export function itemLabelKey(label: string): string {
+  return label.trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
+export function findItemByIdentity(
+  state: PersistedState,
+  input: { tripTypeId: TripTypeId; categoryId: string; label: string },
+): MasterItem | undefined {
+  const key = itemLabelKey(input.label)
+  return state.masterPool.items.find(
+    (i) =>
+      i.tripTypeId === input.tripTypeId &&
+      i.categoryId === input.categoryId &&
+      itemLabelKey(i.label) === key,
+  )
+}
+
 export function mergeMasterPool(
   existing: MasterPool,
   seeded: MasterPool,

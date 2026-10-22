@@ -147,6 +147,17 @@
 
 /* ---------- Home ---------- */
 
+.home-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.home-refresh {
+  color: var(--on-panel);
+}
+
 .home-header {
   display: flex;
   align-items: flex-start;

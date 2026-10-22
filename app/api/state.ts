@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import {
   emptyServerTripState,
-  getTeamTripState,
-  saveTeamTripState,
+  getTeamTripStateRow,
+  saveMergedTeamTripState,
   type ServerTripState,
 } from './_lib/db.js'
 import { methodNotAllowed, readJsonBody } from './_lib/http.js'
@@ -16,23 +16,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'GET') {
     try {
-      const state = await getTeamTripState(session.teamId)
-      return res.status(200).json({ state })
+      const row = await getTeamTripStateRow(session.teamId)
+      return res.status(200).json({ state: row.state, updatedAt: row.updatedAt })
     } catch (err) {
       console.error('state GET error', err)
-      return res.status(500).json({ error: 'Could not load team state.' })
+      return res.status(500).json({ error: 'Could not load team data.' })
     }
   }
 
   if (req.method === 'PUT') {
-    const body = readJsonBody<{ state?: ServerTripState }>(req)
+    const body = readJsonBody<{ state?: ServerTripState; base?: ServerTripState }>(req)
     if (!body?.state || typeof body.state !== 'object') {
       return res.status(400).json({ error: 'Missing state body.' })
     }
 
     try {
-      await saveTeamTripState(session.teamId, body.state)
-      return res.status(200).json({ ok: true })
+      const row = await saveMergedTeamTripState(
+        session.teamId,
+        body.state,
+        body.base && typeof body.base === 'object' ? body.base : undefined,
+      )
+      return res.status(200).json({ ok: true, state: row.state, updatedAt: row.updatedAt })
     } catch (err) {
       console.error('state PUT error', err)
       return res.status(500).json({ error: 'Could not save team state.' })

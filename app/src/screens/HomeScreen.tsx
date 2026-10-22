@@ -1,4 +1,5 @@
 import { ProgressCard } from '../components/ProgressCard'
+import { RefreshButton } from '../components/RefreshButton'
 import { TripCard } from '../components/TripCard'
 import { ArtIcon, type ArtName } from '../components/icons/ArtIcon'
 import { UiIcon } from '../components/icons/UiIcon'
@@ -19,6 +20,8 @@ interface HomeScreenProps {
   onOpenSettings: () => void
   onStartTrip: () => void
   onEditTrip: () => void
+  onRefresh: () => void
+  refreshing?: boolean
 }
 
 export function HomeScreen({
@@ -35,6 +38,8 @@ export function HomeScreen({
   onOpenSettings,
   onStartTrip,
   onEditTrip,
+  onRefresh,
+  refreshing,
 }: HomeScreenProps) {
   const remaining = total - packed
   const tiles: { label: string; art: ArtName; onClick: () => void; meta?: string }[] = [
@@ -63,9 +68,12 @@ export function HomeScreen({
               : 'Next adventure is calling!'}
           </p>
         </div>
-        <button type="button" className="avatar" aria-label="Team settings" onClick={onOpenSettings}>
-          <span>{teamName.trim().charAt(0).toUpperCase() || '⛺'}</span>
-        </button>
+        <div className="home-header-actions">
+          <RefreshButton variant="home" onClick={onRefresh} busy={refreshing} />
+          <button type="button" className="avatar" aria-label="Team settings" onClick={onOpenSettings}>
+            <span>{teamName.trim().charAt(0).toUpperCase() || '⛺'}</span>
+          </button>
+        </div>
       </header>
 
       <div className="home-hero">

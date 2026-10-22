@@ -94,6 +94,12 @@ const PATHS = {
       <path d="M4 4v4h4" />
     </>
   ),
+  refresh: (
+    <>
+      <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3" />
+      <path d="M4 4v4h4" />
+    </>
+  ),
   pencil: (
     <>
       <path d="M13.5 5.5 18.5 10.5" />

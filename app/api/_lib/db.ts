@@ -1,4 +1,5 @@
 import { sql } from '@vercel/postgres'
+import { emptyTeamSlice, mergeTeamState } from '../../shared/team-merge.mjs'
 
 export interface TeamRow {
   id: string
@@ -60,25 +61,82 @@ export interface ServerTripState {
   removedItemIds?: string[]
 }
 
-export async function getTeamTripState(teamId: string): Promise<ServerTripState> {
-  const { rows } = await sql<{ state: ServerTripState }>`
-    SELECT state FROM team_trip_state WHERE team_id = ${teamId}::uuid LIMIT 1
+export interface TeamTripStateRow {
+  state: ServerTripState
+  updatedAt: string | null
+}
+
+function toIso(value: unknown): string | null {
+  if (!value) return null
+  const date = value instanceof Date ? value : new Date(String(value))
+  if (Number.isNaN(date.getTime())) return null
+  return date.toISOString()
+}
+
+export async function getTeamTripStateRow(teamId: string): Promise<TeamTripStateRow> {
+  const { rows } = await sql<{ state: ServerTripState; updated_at: Date | string | null }>`
+    SELECT state, updated_at FROM team_trip_state WHERE team_id = ${teamId}::uuid LIMIT 1
   `
-  const raw = rows[0]?.state
-  if (!raw || typeof raw !== 'object') {
-    return emptyServerTripState()
+  const row = rows[0]
+  if (!row) {
+    return { state: emptyServerTripState(), updatedAt: null }
   }
-  return normalizeServerTripState(raw as ServerTripState)
+  const raw = row.state
+  const state =
+    raw && typeof raw === 'object' ? normalizeServerTripState(raw as ServerTripState) : emptyServerTripState()
+  return { state, updatedAt: toIso(row.updated_at) }
+}
+
+export async function getTeamTripState(teamId: string): Promise<ServerTripState> {
+  return (await getTeamTripStateRow(teamId)).state
 }
 
 export async function saveTeamTripState(teamId: string, state: ServerTripState): Promise<void> {
-  const normalized = normalizeServerTripState(state)
-  await sql`
-    INSERT INTO team_trip_state (team_id, state, updated_at)
-    VALUES (${teamId}::uuid, ${JSON.stringify(normalized)}::jsonb, NOW())
-    ON CONFLICT (team_id) DO UPDATE
-    SET state = EXCLUDED.state, updated_at = NOW()
-  `
+  await saveMergedTeamTripState(teamId, state, emptyTeamSlice())
+}
+
+export async function saveMergedTeamTripState(
+  teamId: string,
+  incoming: ServerTripState,
+  base: ServerTripState | undefined,
+): Promise<TeamTripStateRow> {
+  const incomingNorm = normalizeServerTripState(incoming)
+  const baseNorm = base ? normalizeServerTripState(base) : emptyServerTripState()
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const current = await getTeamTripStateRow(teamId)
+    const stored = current.updatedAt ? current.state : emptyServerTripState()
+    const merged = normalizeServerTripState(
+      mergeTeamState(baseNorm, incomingNorm, stored) as ServerTripState,
+    )
+    const payload = JSON.stringify(merged)
+
+    if (!current.updatedAt) {
+      const inserted = await sql<{ updated_at: Date | string }>`
+        INSERT INTO team_trip_state (team_id, state, updated_at)
+        VALUES (${teamId}::uuid, ${payload}::jsonb, NOW())
+        ON CONFLICT (team_id) DO NOTHING
+        RETURNING updated_at
+      `
+      if (inserted.rows[0]) {
+        return { state: merged, updatedAt: toIso(inserted.rows[0].updated_at) }
+      }
+      continue
+    }
+
+    const updated = await sql<{ updated_at: Date | string }>`
+      UPDATE team_trip_state
+      SET state = ${payload}::jsonb, updated_at = NOW()
+      WHERE team_id = ${teamId}::uuid
+        AND updated_at IS NOT DISTINCT FROM ${current.updatedAt}::timestamptz
+      RETURNING updated_at
+    `
+    if (updated.rows[0]) {
+      return { state: merged, updatedAt: toIso(updated.rows[0].updated_at) }
+    }
+  }
+
+  throw new Error('Could not save team state (concurrent writes).')
 }
 
 function normalizeCatalog(raw: ServerTripState['catalog']): ServerCatalog | undefined {

@@ -103,6 +103,10 @@
   background: var(--surface-2);
 }
 
+.icon-btn:disabled {
+  opacity: 0.7;
+}
+
 .icon-btn--panel {
   color: var(--on-panel);
   background: rgb(255 255 255 / 0.08);

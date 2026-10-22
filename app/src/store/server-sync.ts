@@ -2,6 +2,7 @@ import type { ServerTripStatePayload } from '../api/client'
 import type { PersistedState } from '../types'
 import { resolveTeamCatalog } from './catalog'
 import { loadLegacyLocalTripSlice } from './persistence'
+import { mergeTeamState } from './team-merge'
 
 /** Team catalog lives on the same JSON blob as trips; seed if the team has none yet. */
 export function mergeServerIntoPersisted(server: ServerTripStatePayload): PersistedState {
@@ -25,6 +26,16 @@ export function extractServerSlice(state: PersistedState): ServerTripStatePayloa
     catalog: state.masterPool,
     removedItemIds: state.removedItemIds,
   }
+}
+
+/** Keep in-flight local edits while applying a remote GET/PUT result. */
+export function applyRemoteToLocal(
+  acked: PersistedState,
+  local: PersistedState,
+  remote: ServerTripStatePayload,
+): PersistedState {
+  const merged = mergeTeamState(extractServerSlice(acked), extractServerSlice(local), remote)
+  return mergeServerIntoPersisted(merged as ServerTripStatePayload)
 }
 
 export function serverStateIsEmpty(server: ServerTripStatePayload): boolean {

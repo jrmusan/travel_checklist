@@ -15,6 +15,7 @@ import { SettingsScreen } from './screens/SettingsScreen'
 import { TripsScreen } from './screens/TripsScreen'
 import {
   addCatalogItem,
+  findItemByIdentity,
   isCatalogError,
   newCustomItemId,
   removeCatalogItem,
@@ -62,7 +63,9 @@ function App() {
     useAuth()
   const tripTypes = listTripTypes()
   const [selectedTypeId, setSelectedTypeId] = useState<TripTypeId>(tripTypes[0]?.id ?? 'camper')
-  const [state, update, hydrated, syncError, flushSave] = useTeamPersistedState(team)
+  const [state, update, hydrated, syncError, flushSave, refresh, refreshing] =
+    useTeamPersistedState(team)
+  const [syncToast, setSyncToast] = useState<string | null>(null)
 
   const [view, navigate] = useHistoryView()
   const [packFilter, setPackFilter] = useState<PackFilter>('all')
@@ -95,6 +98,11 @@ function App() {
 
   const closeSheet = useCallback(() => setSheetOpen(false), [setSheetOpen])
   const closeComplete = useCallback(() => setShowComplete(false), [setShowComplete])
+  const handleRefresh = useCallback(async () => {
+    await refresh()
+    setSyncToast('List updated')
+    window.setTimeout(() => setSyncToast(null), 1600)
+  }, [refresh])
 
   if (authLoading) {
     return <Splash message="Loading checklist…" />
@@ -170,6 +178,17 @@ function App() {
   }
 
   const handleAddItem = (input: { categoryId: string; label: string }): string | null => {
+    const existing = findItemByIdentity(state, {
+      tripTypeId: selectedTypeId,
+      categoryId: input.categoryId,
+      label: input.label,
+    })
+    if (existing) {
+      if (activeForSelected && !checkedIds.has(existing.id)) {
+        update((s) => setItemsChecked(s, activeForSelected.id, [existing.id], true), { flush: true })
+      }
+      return null
+    }
     const payload = {
       ...input,
       tripTypeId: selectedTypeId,
@@ -217,6 +236,8 @@ function App() {
           onUpdateItem={handleUpdateItem}
           onRemoveItem={handleRemoveItem}
           onFlushSave={flushSave}
+          onRefresh={() => void handleRefresh()}
+          refreshing={refreshing}
           onBack={() => navigate('home')}
           onStartTrip={() => openTripSheet()}
           packFilter={packFilter}
@@ -288,6 +309,8 @@ function App() {
           onOpenSettings={() => navigate('settings')}
           onStartTrip={() => openTripSheet()}
           onEditTrip={() => openTripSheet('edit')}
+          onRefresh={() => void handleRefresh()}
+          refreshing={refreshing}
         />
       )
   }
@@ -297,6 +320,11 @@ function App() {
       {syncError && (
         <p className="sync-banner" role="status">
           Sync issue: {syncError}
+        </p>
+      )}
+      {syncToast && (
+        <p className="sync-toast" role="status">
+          {syncToast}
         </p>
       )}
 
