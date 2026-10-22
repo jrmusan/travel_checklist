@@ -4,5 +4,14 @@
   "installCommand": "npm ci --prefix app",
   "buildCommand": "npm run build --prefix app",
   "outputDirectory": "app/dist",
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" },
+        { "key": "Service-Worker-Allowed", "value": "/" }
+      ]
+    }
+  ],
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

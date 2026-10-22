@@ -177,6 +177,19 @@ Project → **Settings → Domains** → add e.g. `checklist.example.com` and fo
 
 ---
 
+## Install on iPhone (Home Screen)
+
+CampList is a Progressive Web App. After deploy, add it from **Safari** (Chrome on iOS cannot install it):
+
+1. Open **Safari** and go to `https://travel.jrmusan.com` (the `*.vercel.app` URL works the same).
+2. Tap the **Share** button (square with an arrow, at the bottom of the screen).
+3. Scroll the sheet and tap **Add to Home Screen**.
+4. Tap **Add**.
+
+CampList then launches from the Home Screen icon **full-screen** (no Safari chrome). Packing still needs a network connection to sign in and sync; the UI shell stays available if the connection drops.
+
+---
+
 ## Fix: `relation "teams" does not exist`
 
 Signup or sign-in returns **500** and logs `NeonDbError: relation "teams" does not exist` when Postgres is linked but the schema was never applied.
