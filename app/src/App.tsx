@@ -1,18 +1,22 @@
 import { useMemo, useState } from 'react'
 import { HeaderArt } from './components/HeaderArt'
+import { LoginPage } from './components/LoginPage'
 import { PackView } from './components/PackView'
 import { TripControls } from './components/TripControls'
 import { TripTypePicker } from './components/TripTypePicker'
-import { usePersistedState } from './hooks/usePersistedState'
+import { useAuth } from './hooks/useAuth'
+import { useTeamPersistedState } from './hooks/useTeamPersistedState'
 import { endTrip, itemsForTripType, startTrip, toggleItemChecked } from './store/trip-actions'
 import { listTripTypes } from './trip-types/registry'
 import type { TripTypeId } from './types'
 import './App.css'
 
 function App() {
+  const { team, loading: authLoading, error: authError, setError, login, register, logout } =
+    useAuth()
   const tripTypes = listTripTypes()
   const [selectedTypeId, setSelectedTypeId] = useState<TripTypeId>(tripTypes[0]?.id ?? 'camper')
-  const [state, update, hydrated] = usePersistedState()
+  const [state, update, hydrated, syncError] = useTeamPersistedState(team)
 
   const selectedType = tripTypes.find((t) => t.id === selectedTypeId) ?? tripTypes[0]
 
@@ -33,10 +37,33 @@ function App() {
     return new Set(progress?.checkedItemIds ?? [])
   }, [activeForSelected, state.progressByTripId])
 
-  if (!hydrated || !selectedType) {
+  if (authLoading) {
     return (
       <div className="app-shell loading">
         <p>Loading checklist…</p>
+      </div>
+    )
+  }
+
+  if (!team) {
+    return (
+      <LoginPage
+        error={authError}
+        onClearError={() => setError(null)}
+        onSignIn={async (teamName, password) => {
+          await login(teamName, password)
+        }}
+        onSignUp={async (teamName, password, confirmPassword) => {
+          await register(teamName, password, confirmPassword)
+        }}
+      />
+    )
+  }
+
+  if (!hydrated || !selectedType) {
+    return (
+      <div className="app-shell loading">
+        <p>Loading team packing list…</p>
       </div>
     )
   }
@@ -56,7 +83,21 @@ function App() {
             <p className="subtitle">{selectedType.description}</p>
           </div>
         </div>
+        <div className="header-session">
+          <p className="team-badge">
+            Trip team: <strong>{team.name}</strong>
+          </p>
+          <button type="button" className="btn secondary btn-sm" onClick={() => logout()}>
+            Log out
+          </button>
+        </div>
       </header>
+
+      {syncError && (
+        <p className="sync-banner" role="status">
+          Sync issue: {syncError}
+        </p>
+      )}
 
       <TripTypePicker
         types={tripTypes}

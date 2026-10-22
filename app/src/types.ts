@@ -1,5 +1,5 @@
 /** Versioned persistence schema — bump when shape changes. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export type TripTypeId = string;
 

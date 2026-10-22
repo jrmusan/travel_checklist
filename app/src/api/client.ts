@@ -1,0 +1,78 @@
+export interface TeamInfo {
+  id: string
+  name: string
+}
+
+export interface ServerTripStatePayload {
+  schemaVersion: number
+  trips: import('../types').TripInstance[]
+  activeTripId: string | null
+  progressByTripId: Record<string, import('../types').TripProgress>
+}
+
+async function parseJson<T>(res: Response): Promise<T> {
+  const data = (await res.json()) as T & { error?: string }
+  if (!res.ok) {
+    throw new Error(data.error ?? `Request failed (${res.status})`)
+  }
+  return data
+}
+
+const jsonHeaders = { 'Content-Type': 'application/json' }
+
+export async function fetchMe(): Promise<TeamInfo | null> {
+  const res = await fetch('/api/auth/me', { credentials: 'include' })
+  if (res.status === 401) return null
+  const data = await parseJson<{ team: TeamInfo }>(res)
+  return data.team
+}
+
+export async function signIn(teamName: string, password: string): Promise<TeamInfo> {
+  const res = await fetch('/api/auth/signin', {
+    method: 'POST',
+    credentials: 'include',
+    headers: jsonHeaders,
+    body: JSON.stringify({ teamName, password }),
+  })
+  const data = await parseJson<{ team: TeamInfo }>(res)
+  return data.team
+}
+
+export async function signUp(
+  teamName: string,
+  password: string,
+  confirmPassword: string,
+): Promise<TeamInfo> {
+  const res = await fetch('/api/auth/signup', {
+    method: 'POST',
+    credentials: 'include',
+    headers: jsonHeaders,
+    body: JSON.stringify({ teamName, password, confirmPassword }),
+  })
+  const data = await parseJson<{ team: TeamInfo }>(res)
+  return data.team
+}
+
+export async function signOut(): Promise<void> {
+  const res = await fetch('/api/auth/logout', {
+    method: 'POST',
+    credentials: 'include',
+  })
+  await parseJson<{ ok: boolean }>(res)
+}
+
+export async function fetchTeamState(): Promise<ServerTripStatePayload> {
+  const res = await fetch('/api/state', { credentials: 'include' })
+  const data = await parseJson<{ state: ServerTripStatePayload }>(res)
+  return data.state
+}
+
+export async function saveTeamState(state: ServerTripStatePayload): Promise<void> {
+  const res = await fetch('/api/state', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: jsonHeaders,
+    body: JSON.stringify({ state }),
+  })
+  await parseJson<{ ok: boolean }>(res)
+}

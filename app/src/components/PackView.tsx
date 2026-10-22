@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { MasterCategory, MasterItem, PackFilter } from '../types'
+import { useCategoryExpanded } from '../hooks/useCategoryExpanded'
 import { ProgressHeader } from './ProgressHeader'
 
 interface PackViewProps {
@@ -17,8 +18,11 @@ export function PackView({
   onToggle,
   disabled,
 }: PackViewProps) {
-  const [filter, setFilter] = useState<PackFilter>('remaining')
+  const [filter, setFilter] = useState<PackFilter>('all')
   const [query, setQuery] = useState('')
+
+  const categoryIds = useMemo(() => categories.map((c) => c.id), [categories])
+  const { isExpanded, toggleExpanded } = useCategoryExpanded(categoryIds)
 
   const itemsByCategory = useMemo(() => {
     const map = new Map<string, MasterItem[]>()
@@ -35,23 +39,25 @@ export function PackView({
 
   const normalizedQuery = query.trim().toLowerCase()
 
-  const visibleCategories = useMemo(() => {
-    return categories
-      .map((cat) => {
-        const catItems = (itemsByCategory.get(cat.id) ?? []).filter((item) => {
-          if (normalizedQuery && !item.label.toLowerCase().includes(normalizedQuery)) {
-            return false
-          }
-          const packed = checkedIds.has(item.id)
-          if (filter === 'remaining' && packed) {
-            return false
-          }
-          return true
-        })
-        return { cat, catItems }
+  const categorySections = useMemo(() => {
+    return categories.map((cat) => {
+      const allCatItems = itemsByCategory.get(cat.id) ?? []
+      const catItems = allCatItems.filter((item) => {
+        if (normalizedQuery && !item.label.toLowerCase().includes(normalizedQuery)) {
+          return false
+        }
+        const packed = checkedIds.has(item.id)
+        if (filter === 'remaining' && packed) {
+          return false
+        }
+        return true
       })
-      .filter(({ catItems }) => catItems.length > 0)
+      const packedCount = allCatItems.filter((i) => checkedIds.has(i.id)).length
+      return { cat, catItems, totalInCategory: allCatItems.length, packedCount }
+    })
   }, [categories, itemsByCategory, normalizedQuery, filter, checkedIds])
+
+  const visibleCategories = categorySections.filter(({ catItems }) => catItems.length > 0)
 
   const total = items.length
   const packed = items.filter((i) => checkedIds.has(i.id)).length
@@ -99,29 +105,58 @@ export function PackView({
               : 'No items match your search.'}
           </p>
         ) : (
-          visibleCategories.map(({ cat, catItems }) => (
-            <section key={cat.id} className="category-block">
-              <h2>{cat.name}</h2>
-              <ul>
-                {catItems.map((item) => {
-                  const checked = checkedIds.has(item.id)
-                  return (
-                    <li key={item.id}>
-                      <label className={checked ? 'item-row checked' : 'item-row'}>
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={disabled}
-                          onChange={() => onToggle(item.id)}
-                        />
-                        <span>{item.label}</span>
-                      </label>
-                    </li>
-                  )
-                })}
-              </ul>
-            </section>
-          ))
+          visibleCategories.map(({ cat, catItems, totalInCategory, packedCount }) => {
+            const expanded = isExpanded(cat.id)
+            const headerId = `category-header-${cat.id}`
+            const panelId = `category-panel-${cat.id}`
+
+            return (
+              <section key={cat.id} className="category-block">
+                <h2>
+                  <button
+                    type="button"
+                    className="category-toggle"
+                    aria-expanded={expanded}
+                    aria-controls={panelId}
+                    id={headerId}
+                    onClick={() => toggleExpanded(cat.id)}
+                  >
+                    <span className="category-toggle-label">
+                      <span className="category-chevron" aria-hidden>
+                        {expanded ? '▾' : '▸'}
+                      </span>
+                      {cat.name}
+                    </span>
+                    {!expanded && (
+                      <span className="category-progress-pill" aria-label={`${packedCount} of ${totalInCategory} packed`}>
+                        {packedCount}/{totalInCategory}
+                      </span>
+                    )}
+                  </button>
+                </h2>
+                {expanded && (
+                  <ul id={panelId} role="region" aria-labelledby={headerId}>
+                    {catItems.map((item) => {
+                      const checked = checkedIds.has(item.id)
+                      return (
+                        <li key={item.id}>
+                          <label className={checked ? 'item-row checked' : 'item-row'}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={disabled}
+                              onChange={() => onToggle(item.id)}
+                            />
+                            <span>{item.label}</span>
+                          </label>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </section>
+            )
+          })
         )}
       </div>
     </div>

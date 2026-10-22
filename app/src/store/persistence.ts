@@ -7,6 +7,32 @@ import {
 
 const STORAGE_KEY = 'travel-checklist:v1'
 
+export interface LegacyLocalTripSlice {
+  trips: PersistedState['trips']
+  activeTripId: PersistedState['activeTripId']
+  progressByTripId: PersistedState['progressByTripId']
+}
+
+/** One-time read of pre-auth browser trip data for migration after login. */
+export function loadLegacyLocalTripSlice(): LegacyLocalTripSlice | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<PersistedState>
+    if (!Array.isArray(parsed.trips)) return null
+    return {
+      trips: parsed.trips,
+      activeTripId: typeof parsed.activeTripId === 'string' ? parsed.activeTripId : null,
+      progressByTripId:
+        parsed.progressByTripId && typeof parsed.progressByTripId === 'object'
+          ? parsed.progressByTripId
+          : {},
+    }
+  } catch {
+    return null
+  }
+}
+
 export function createEmptyProgress(): TripProgress {
   return { checkedItemIds: [] }
 }

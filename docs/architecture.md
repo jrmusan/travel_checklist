@@ -1,6 +1,6 @@
 # Travel checklist — architecture
 
-Client-only React app (`app/`) for packing lists organized by **trip type**, with a shared **master item pool** and **per-trip check state**.
+React app (`app/`) for packing lists organized by **trip type**, with a shared **master item pool**, **per-trip check state**, and **team-based auth** so everyone on a trip team shares the same packing progress.
 
 ## Concepts
 
@@ -19,25 +19,44 @@ Trip types are registered in `app/src/trip-types/registry.ts`. The UI lists type
 
 | Layer | What it stores | Lifetime |
 |--------|----------------|----------|
-| **Master pool** | Catalog of categories and items per trip type | Persists in `localStorage`; updated when new items appear in seed data |
-| **Trip instance** | One packing run for a trip type (`startedAt`, `status`) | Many per type over time |
-| **Trip progress** | Which master item ids are checked for that instance | Reset on each new trip |
+| **Master pool** | Catalog of categories and items per trip type | Built from registry on each client; merged when seed data grows |
+| **Trip instance** | One packing run for a trip type (`startedAt`, `status`) | Many per type over time; **stored per team on the server** |
+| **Trip progress** | Which master item ids are checked for that instance | Reset on each new trip; **stored per team on the server** |
 
 Starting a trip creates a new instance with **empty** progress. Ending a trip (or “End & start next”) marks the instance ended; the master pool is unchanged. Only checkmarks are trip-scoped.
 
-### Persistence
+### Team auth and shared state
 
-Key: `travel-checklist:v1` in `localStorage`.
+- **Trip team** = shared account (team name + password). All members sign in with the same credentials and see the same trips and checkmarks.
+- **Sign in / Create account** on a woodsy-themed login gate; unauthenticated users never see the checklist.
+- Passwords are **bcrypt-hashed** server-side; sessions use an **httpOnly cookie** (signed JWT via `SESSION_SECRET`).
+- Server routes live under `app/api/` (Vercel serverless) and use **Postgres** (`POSTGRES_URL`, e.g. Vercel Postgres or Neon).
 
-`PersistedState` (`app/src/types.ts`):
+**Database tables** (`app/db/schema.sql`):
 
-- `schemaVersion` — bump when migrating stored shape
-- `masterPool` — `{ categories, items }`
-- `trips` — trip instances
-- `activeTripId` — current packing session
-- `progressByTripId` — map of trip id → `{ checkedItemIds }`
+| Table | Purpose |
+|--------|---------|
+| `teams` | Unique team name (case-insensitive), password hash |
+| `team_trip_state` | JSONB `{ schemaVersion, trips, activeTripId, progressByTripId }` per team |
 
-On load, seed data from the registry is **merged** into the master pool (new categories/items from markdown updates are added without wiping user trip history).
+The master pool is **not** stored in the DB — it remains the camper markdown seed (and future trip-type seeds) on the client, same as before.
+
+**One-time migration:** If a browser had trip data in `localStorage` before login, the first successful load uploads that trip slice to the team when the server state is empty.
+
+### Client persistence (UI only)
+
+| Key | Purpose |
+|-----|---------|
+| `travel-checklist:category-expanded:v1` | Which category sections are expanded (accordion); session UI preference |
+| `travel-checklist:v1` | Legacy pre-auth trip data; read once for migration after login |
+
+Trip progress is **not** kept in `localStorage` after team auth is enabled — it syncs through `GET/PUT /api/state` with debounced saves.
+
+### Pack list UX
+
+- **Full list** is the default view: checked items stay in category order with strikethrough; only the checkbox state changes.
+- **Still to pack** filter hides checked items while that filter is active.
+- Categories are **collapsible**; collapsed headers show progress (`packed/total`).
 
 ## Adding a second trip type
 
@@ -46,18 +65,30 @@ On load, seed data from the registry is **merged** into the master pool (new cat
    - Export `TripTypeDefinition` (id e.g. `air_travel`)
    - Export `loadAirTravelMasterPool()` using `parseMarkdownToMasterPool` or a static list
 3. Register the entry in `app/src/trip-types/registry.ts` (`ENTRIES` array).
-4. If the persisted schema changes, increment `SCHEMA_VERSION` and extend `migrate()` in `app/src/store/persistence.ts`.
+4. If the persisted schema changes, increment `SCHEMA_VERSION` and extend migration logic in `app/src/store/persistence.ts` and server state normalization in `app/api/_lib/db.ts`.
 
 No UI changes are required beyond the registry — the trip type picker and pack view already key off `tripTypeId`.
 
 ## Source layout
 
 ```
-app/src/
-  trip-types/     Registry + per-type seed loaders
-  seed/           Markdown → master pool parser
-  store/          localStorage load/save, trip actions
-  components/     Pack view, trip controls, type picker
-  types.ts        Shared interfaces
+app/
+  api/            Vercel serverless: auth + team state
+  db/             Postgres schema
+  scripts/        db:migrate helper
+  src/
+    api/          Browser fetch helpers
+    trip-types/   Registry + per-type seed loaders
+    seed/         Markdown → master pool parser
+    store/        Trip actions, server sync helpers
+    hooks/        Auth, team state, category accordion
+    components/   Pack view, login, trip controls
+    types.ts      Shared interfaces
 checklists/       Human-editable markdown (camper seed source)
 ```
+
+## Local development
+
+- **UI only:** `npm run dev` (Vite). Auth API calls fail unless something serves `/api` (see below).
+- **Full stack:** `npm run db:migrate` with `POSTGRES_URL`, set `SESSION_SECRET`, then `npm run dev:full` (`vercel dev`) — Vite is proxied and `/api` hits serverless handlers.
+- **Production build:** `npm ci && npm run build` (static client + TypeScript check; API deploys with the Vercel project when Root Directory is `app`).
