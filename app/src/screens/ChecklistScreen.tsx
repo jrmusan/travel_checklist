@@ -21,6 +21,7 @@ interface ChecklistScreenProps {
   onAddItem: (input: { categoryId: string; label: string }) => string | null
   onUpdateItem: (itemId: string, input: { label: string; categoryId: string }) => string | null
   onRemoveItem: (itemId: string) => void
+  onFlushSave: () => void
   onBack: () => void
   onStartTrip: () => void
   packFilter: PackFilter
@@ -41,6 +42,7 @@ export function ChecklistScreen({
   onAddItem,
   onUpdateItem,
   onRemoveItem,
+  onFlushSave,
   onBack,
   onStartTrip,
   packFilter,
@@ -281,6 +283,7 @@ export function ChecklistScreen({
                     onClick={() => {
                       if (editing) {
                         setEditingCategoryId(null)
+                        onFlushSave()
                         return
                       }
                       setEditingCategoryId(cat.id)

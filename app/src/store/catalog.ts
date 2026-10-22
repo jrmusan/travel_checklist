@@ -51,13 +51,10 @@ export function resolveTeamCatalog(
     catalog &&
     typeof catalog === 'object' &&
     ((catalog.categories?.length ?? 0) > 0 || (catalog.items?.length ?? 0) > 0)
-
-  if (!hasCatalog) {
-    return { masterPool: seeded, removedItemIds: [] }
-  }
+  const existing = hasCatalog ? sanitizePool(catalog) : { categories: [], items: [] }
 
   return {
-    masterPool: mergeMasterPool(sanitizePool(catalog), seeded, removed),
+    masterPool: mergeMasterPool(existing, seeded, removed),
     removedItemIds: removed,
   }
 }

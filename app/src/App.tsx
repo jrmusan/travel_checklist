@@ -62,7 +62,7 @@ function App() {
     useAuth()
   const tripTypes = listTripTypes()
   const [selectedTypeId, setSelectedTypeId] = useState<TripTypeId>(tripTypes[0]?.id ?? 'camper')
-  const [state, update, hydrated, syncError] = useTeamPersistedState(team)
+  const [state, update, hydrated, syncError, flushSave] = useTeamPersistedState(team)
 
   const [view, navigate] = useHistoryView()
   const [packFilter, setPackFilter] = useState<PackFilter>('all')
@@ -180,7 +180,7 @@ function App() {
     update((s) => {
       const next = addCatalogItem(s, payload)
       return isCatalogError(next) ? s : next
-    })
+    }, { flush: true })
     return null
   }
 
@@ -193,12 +193,12 @@ function App() {
     update((s) => {
       const next = updateCatalogItem(s, itemId, input)
       return isCatalogError(next) ? s : next
-    })
+    }, { flush: true })
     return null
   }
 
   const handleRemoveItem = (itemId: string) => {
-    update((s) => removeCatalogItem(s, itemId))
+    update((s) => removeCatalogItem(s, itemId), { flush: true })
   }
 
   let screen
@@ -216,6 +216,7 @@ function App() {
           onAddItem={handleAddItem}
           onUpdateItem={handleUpdateItem}
           onRemoveItem={handleRemoveItem}
+          onFlushSave={flushSave}
           onBack={() => navigate('home')}
           onStartTrip={() => openTripSheet()}
           packFilter={packFilter}

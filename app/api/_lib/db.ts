@@ -103,6 +103,6 @@ function normalizeServerTripState(state: ServerTripState): ServerTripState {
         ? state.progressByTripId
         : {},
     ...(catalog ? { catalog } : {}),
-    ...(removedItemIds.length ? { removedItemIds } : {}),
+    removedItemIds,
   }
 }

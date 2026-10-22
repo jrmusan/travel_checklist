@@ -70,12 +70,21 @@ export async function fetchTeamState(): Promise<ServerTripStatePayload> {
   return data.state
 }
 
-export async function saveTeamState(state: ServerTripStatePayload): Promise<void> {
+export async function saveTeamState(
+  state: ServerTripStatePayload,
+  opts?: { keepalive?: boolean },
+): Promise<void> {
   const res = await fetch('/api/state', {
     method: 'PUT',
     credentials: 'include',
     headers: jsonHeaders,
     body: JSON.stringify({ state }),
+    keepalive: Boolean(opts?.keepalive),
   })
-  await parseJson<{ ok: boolean }>(res)
+  try {
+    await parseJson<{ ok: boolean }>(res)
+  } catch (err) {
+    if (opts?.keepalive) return
+    throw err
+  }
 }
