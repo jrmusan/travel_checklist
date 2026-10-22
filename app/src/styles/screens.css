@@ -278,6 +278,25 @@
   overflow: hidden;
 }
 
+.category-card.is-complete .category-name {
+  color: var(--primary-strong);
+}
+
+.category-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s ease;
+}
+
+.category-panel.is-open {
+  grid-template-rows: 1fr;
+}
+
+.category-panel-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
 .category-heading {
   display: flex;
   align-items: center;

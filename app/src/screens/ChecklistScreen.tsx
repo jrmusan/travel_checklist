@@ -4,7 +4,7 @@ import { CheckAll } from '../components/CheckAll'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { ArtIcon } from '../components/icons/ArtIcon'
 import { UiIcon } from '../components/icons/UiIcon'
-import { useCategoryExpanded } from '../hooks/useCategoryExpanded'
+import { useAutoCollapseOnComplete, useCategoryExpanded } from '../hooks/useCategoryExpanded'
 import { categoryArt, categoryLabel, itemArt } from '../lib/catalog-art'
 import { percent, tripDateRange, tripDayCount } from '../lib/trips'
 import type { MasterCategory, MasterItem, PackFilter, TripInstance, TripTypeDefinition } from '../types'
@@ -47,7 +47,14 @@ export function ChecklistScreen({
   const disabled = !activeTrip
 
   const categoryIds = useMemo(() => categories.map((c) => c.id), [categories])
-  const { isExpanded, toggleExpanded, expand } = useCategoryExpanded(categoryIds)
+  const {
+    expandedById,
+    isExpanded,
+    toggleExpanded,
+    expand,
+    scheduleCollapse,
+    cancelScheduledCollapse,
+  } = useCategoryExpanded(categoryIds)
 
   useEffect(() => {
     if (focusSearch) searchRef.current?.focus()
@@ -87,6 +94,24 @@ export function ChecklistScreen({
       })
       .filter((s) => s.visible.length > 0)
   }, [categories, categoryFilter, itemsByCategory, normalizedQuery, packFilter, checkedIds])
+
+  const completions = useMemo(
+    () =>
+      categories.map((cat) => {
+        const all = itemsByCategory.get(cat.id) ?? []
+        const packedCount = all.filter((i) => checkedIds.has(i.id)).length
+        return { id: cat.id, complete: all.length > 0 && packedCount === all.length }
+      }),
+    [categories, itemsByCategory, checkedIds],
+  )
+
+  useAutoCollapseOnComplete(
+    activeTrip?.id ?? 'none',
+    completions,
+    expandedById,
+    scheduleCollapse,
+    cancelScheduledCollapse,
+  )
 
   const total = items.length
   const packed = items.filter((i) => checkedIds.has(i.id)).length
@@ -182,7 +207,11 @@ export function ChecklistScreen({
             const complete = catTotal > 0 && packedCount === catTotal
 
             return (
-              <section key={cat.id} className="card category-card">
+              <section
+                key={cat.id}
+                className={complete ? 'card category-card is-complete' : 'card category-card'}
+                data-complete={complete ? 'true' : 'false'}
+              >
                 <h2 className="category-heading">
                   <CheckAll
                     label={categoryLabel(cat)}
@@ -210,33 +239,46 @@ export function ChecklistScreen({
                     <UiIcon name="chevronDown" size={20} className="category-chevron" />
                   </button>
                 </h2>
-                {expanded && (
-                  <ul id={panelId} role="region" aria-labelledby={headerId} className="item-list">
-                    {visible.map((item) => {
-                      const checked = checkedIds.has(item.id)
-                      return (
-                        <li key={item.id}>
-                          <label className={checked ? 'item-row is-checked' : 'item-row'}>
-                            <input
-                              type="checkbox"
-                              className="visually-hidden"
-                              checked={checked}
-                              disabled={disabled}
-                              onChange={() => onToggle(item.id)}
-                            />
-                            <span className="check-circle" aria-hidden>
-                              <UiIcon name="check" size={16} strokeWidth={3} />
-                            </span>
-                            <span className="item-art" aria-hidden>
-                              <ArtIcon name={itemArt(item, art)} size={24} />
-                            </span>
-                            <span className="item-label">{item.label}</span>
-                          </label>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )}
+                <div
+                  className={expanded ? 'category-panel is-open' : 'category-panel'}
+                  data-expanded={expanded ? 'true' : 'false'}
+                >
+                  <div className="category-panel-inner">
+                    <ul
+                      id={panelId}
+                      role="region"
+                      aria-labelledby={headerId}
+                      aria-hidden={!expanded}
+                      inert={!expanded}
+                      className="item-list"
+                    >
+                      {visible.map((item) => {
+                        const checked = checkedIds.has(item.id)
+                        return (
+                          <li key={item.id}>
+                            <label className={checked ? 'item-row is-checked' : 'item-row'}>
+                              <input
+                                type="checkbox"
+                                className="visually-hidden"
+                                checked={checked}
+                                disabled={disabled}
+                                onChange={() => onToggle(item.id)}
+                                tabIndex={expanded ? 0 : -1}
+                              />
+                              <span className="check-circle" aria-hidden>
+                                <UiIcon name="check" size={16} strokeWidth={3} />
+                              </span>
+                              <span className="item-art" aria-hidden>
+                                <ArtIcon name={itemArt(item, art)} size={24} />
+                              </span>
+                              <span className="item-label">{item.label}</span>
+                            </label>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+                </div>
               </section>
             )
           })
