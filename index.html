@@ -67,8 +67,11 @@
         <a href="https://github.com/jrmusan/travel_checklist/blob/main/README.md">README.md</a>.
       </p>
       <p>
-        When the trip-type web app lands on <code>main</code>, this site will serve the built app from
-        <code>app/</code>; until then this page is a static placeholder.
+        <strong>Misconfigured deploy.</strong> Vercel is serving this repo-root file instead of the built
+        Vite app in <code>app/dist</code>. Redeploy from the latest <code>main</code> (root
+        <a href="https://github.com/jrmusan/travel_checklist/blob/main/vercel.json"><code>vercel.json</code></a>
+        builds <code>app/</code> automatically), or set <strong>Root Directory</strong> to <code>app</code> in
+        the Vercel project settings.
       </p>
     </main>
   </body>

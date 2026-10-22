@@ -8,7 +8,7 @@ Personal travel packing checklists by **trip type** (camper today, more types la
 | --- | --- | --- |
 | Camping checklist (markdown) | [`checklists/camping-essentials.md`](checklists/camping-essentials.md) | Edit in Git or locally; seeds the camper master pool in the app |
 | Trip-type web app | [`app/`](app/) | Vite + React; `localStorage` only — no server DB |
-| Static landing page | [`index.html`](index.html) | Repo-root static page until Vercel root is pointed at `app/` |
+| Misconfigured-deploy fallback | [`index.html`](index.html) | Only served if Vercel deploys repo root without building `app/` |
 | Architecture | [`docs/architecture.md`](docs/architecture.md) | Trip types, master pool, trip instances |
 
 Interactive prototype (not wired to the trip-type model yet): [Camping essentials canvas](https://cursor.com/canvas/store-4d363013-7ab0-46aa-a7c0-b31b5059e469/695d0bf4-d34e-43cb-866e-2d4b31de46be).
@@ -84,22 +84,28 @@ Import `jrmusan/travel_checklist` in the [Vercel Dashboard](https://vercel.com/d
 
 ### 2. Build settings
 
-**Recommended (web app):**
+Pick **one** path. Both deploy the same Vite + React app.
+
+#### A. Recommended — Root Directory `app`
+
+In the Vercel project: **Settings → General → Root Directory** → `app` (Apply).
 
 | Setting | Value |
 | --- | --- |
 | **Root Directory** | `app` |
-| **Install Command** | `npm install` |
-| **Build Command** | `npm run build` |
-| **Output Directory** | `dist` |
+| **Install Command** | *(default)* `npm install` |
+| **Build Command** | *(default)* `npm run build` |
+| **Output Directory** | *(default)* `dist` |
 
-Add SPA rewrites if client routes are added later, e.g. in `app/vercel.json`:
+SPA client routing is handled by [`app/vercel.json`](app/vercel.json) (rewrite to `index.html`).
 
-```json
-{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
-```
+#### B. Repo root — no Root Directory override
 
-**Legacy static-only deploy** (repo root, no app build): see [`vercel.json`](vercel.json) at the repository root (`framework: null`, output `.`).
+Leave **Root Directory** empty (repository root). Root [`vercel.json`](vercel.json) runs `npm ci` / `npm run build` under `app/` and publishes `app/dist`, with the same SPA rewrites.
+
+You do **not** need to duplicate install/build/output in the dashboard; the repo config wins unless you override it in project settings.
+
+If the live URL still shows the static “Misconfigured deploy” page in [`index.html`](index.html), the project is serving the repo root without building — clear a wrong Root Directory override or redeploy from latest `main`.
 
 ### 3. Database on Vercel
 
