@@ -14,6 +14,13 @@ import { HomeScreen } from './screens/HomeScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { TripsScreen } from './screens/TripsScreen'
 import {
+  addCatalogItem,
+  isCatalogError,
+  newCustomItemId,
+  removeCatalogItem,
+  updateCatalogItem,
+} from './store/catalog'
+import {
   endTrip,
   itemsForTripType,
   setItemsChecked,
@@ -140,6 +147,38 @@ function App() {
     update((s) => setItemsChecked(s, activeForSelected.id, itemIds, checked))
   }
 
+  const handleAddItem = (input: { categoryId: string; label: string }): string | null => {
+    const payload = {
+      ...input,
+      tripTypeId: selectedTypeId,
+      id: newCustomItemId(input.categoryId),
+    }
+    const preview = addCatalogItem(state, payload)
+    if (isCatalogError(preview)) return preview.error
+    update((s) => {
+      const next = addCatalogItem(s, payload)
+      return isCatalogError(next) ? s : next
+    })
+    return null
+  }
+
+  const handleUpdateItem = (
+    itemId: string,
+    input: { label: string; categoryId: string },
+  ): string | null => {
+    const preview = updateCatalogItem(state, itemId, input)
+    if (isCatalogError(preview)) return preview.error
+    update((s) => {
+      const next = updateCatalogItem(s, itemId, input)
+      return isCatalogError(next) ? s : next
+    })
+    return null
+  }
+
+  const handleRemoveItem = (itemId: string) => {
+    update((s) => removeCatalogItem(s, itemId))
+  }
+
   let screen
   switch (view) {
     case 'checklist':
@@ -152,6 +191,9 @@ function App() {
           checkedIds={checkedIds}
           onToggle={handleToggle}
           onSetChecked={handleSetChecked}
+          onAddItem={handleAddItem}
+          onUpdateItem={handleUpdateItem}
+          onRemoveItem={handleRemoveItem}
           onBack={() => navigate('home')}
           onStartTrip={() => setSheetOpen(true)}
           packFilter={packFilter}

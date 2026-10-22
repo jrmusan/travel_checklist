@@ -46,11 +46,18 @@ export function emptyServerTripState() {
   }
 }
 
+export interface ServerCatalog {
+  categories: unknown[]
+  items: unknown[]
+}
+
 export interface ServerTripState {
   schemaVersion: number
   trips: unknown[]
   activeTripId: string | null
   progressByTripId: Record<string, { checkedItemIds: string[] }>
+  catalog?: ServerCatalog
+  removedItemIds?: string[]
 }
 
 export async function getTeamTripState(teamId: string): Promise<ServerTripState> {
@@ -74,7 +81,19 @@ export async function saveTeamTripState(teamId: string, state: ServerTripState):
   `
 }
 
+function normalizeCatalog(raw: ServerTripState['catalog']): ServerCatalog | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const categories = Array.isArray(raw.categories) ? raw.categories : []
+  const items = Array.isArray(raw.items) ? raw.items : []
+  if (categories.length === 0 && items.length === 0) return undefined
+  return { categories, items }
+}
+
 function normalizeServerTripState(state: ServerTripState): ServerTripState {
+  const catalog = normalizeCatalog(state.catalog)
+  const removedItemIds = Array.isArray(state.removedItemIds)
+    ? state.removedItemIds.filter((id) => typeof id === 'string')
+    : []
   return {
     schemaVersion: 2,
     trips: Array.isArray(state.trips) ? state.trips : [],
@@ -83,5 +102,7 @@ function normalizeServerTripState(state: ServerTripState): ServerTripState {
       state.progressByTripId && typeof state.progressByTripId === 'object'
         ? state.progressByTripId
         : {},
+    ...(catalog ? { catalog } : {}),
+    ...(removedItemIds.length ? { removedItemIds } : {}),
   }
 }

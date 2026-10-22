@@ -19,11 +19,11 @@ Trip types are registered in `app/src/trip-types/registry.ts`. The UI lists type
 
 | Layer | What it stores | Lifetime |
 |--------|----------------|----------|
-| **Master pool** | Catalog of categories and items per trip type | Built from registry on each client; merged when seed data grows |
+| **Master pool** | Catalog of categories and items per trip type | Seeded from registry markdown on first team load, then **stored per team** as JSON on `team_trip_state.state.catalog` |
 | **Trip instance** | One packing run for a trip type (`startedAt`, `status`) | Many per type over time; **stored per team on the server** |
 | **Trip progress** | Which master item ids are checked for that instance | Reset on each new trip; **stored per team on the server** |
 
-Starting a trip creates a new instance with **empty** progress. Ending a trip (or “End & start next”) marks the instance ended; the master pool is unchanged. Only checkmarks are trip-scoped.
+Starting a trip creates a new instance with **empty** progress. Ending a trip (or “End & start next”) marks the instance ended. Catalog edits (add/rename/move/delete items) change the team master pool for that trip type and apply to future trips; only checkmarks are trip-scoped.
 
 ### Team auth and shared state
 
@@ -37,9 +37,9 @@ Starting a trip creates a new instance with **empty** progress. Ending a trip (o
 | Table | Purpose |
 |--------|---------|
 | `teams` | Unique team name (case-insensitive), password hash |
-| `team_trip_state` | JSONB `{ schemaVersion, trips, activeTripId, progressByTripId }` per team |
+| `team_trip_state` | JSONB `{ schemaVersion, trips, activeTripId, progressByTripId, catalog, removedItemIds }` per team |
 
-The master pool is **not** stored in the DB — it remains the camper markdown seed (and future trip-type seeds) on the client, same as before.
+`catalog` is the team’s full master pool (categories + items). If it is missing, the client seeds from trip-type markdown and the next save writes it. `removedItemIds` keeps deleted seed items from coming back when markdown grows. No extra table or breaking migration — optional keys on the same JSONB column. Teams can add/rename/move/delete items; check state stays on the item id.
 
 **One-time migration:** If a browser had trip data in `localStorage` before login, the first successful load uploads that trip slice to the team when the server state is empty.
 

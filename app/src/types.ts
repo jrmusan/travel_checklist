@@ -50,6 +50,11 @@ export interface TripProgress {
 export interface PersistedState {
   schemaVersion: number;
   masterPool: MasterPool;
+  /**
+   * Seed item ids the team removed. Stops markdown seed merge from bringing
+   * them back. Stored on `team_trip_state.state` with the catalog.
+   */
+  removedItemIds: string[];
   trips: TripInstance[];
   activeTripId: string | null;
   /** tripInstanceId → progress */

@@ -8,6 +8,9 @@ export interface ServerTripStatePayload {
   trips: import('../types').TripInstance[]
   activeTripId: string | null
   progressByTripId: Record<string, import('../types').TripProgress>
+  /** Team catalog; omitted on first load so the client seeds from markdown. */
+  catalog?: import('../types').MasterPool
+  removedItemIds?: string[]
 }
 
 async function parseJson<T>(res: Response): Promise<T> {

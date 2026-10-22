@@ -94,6 +94,19 @@ const PATHS = {
       <path d="M4 4v4h4" />
     </>
   ),
+  pencil: (
+    <>
+      <path d="M13.5 5.5 18.5 10.5" />
+      <path d="M4 20h4.5L19 9.5 14.5 5 4 15.5Z" />
+    </>
+  ),
+  trash: (
+    <>
+      <path d="M5 7h14" />
+      <path d="M10 7V5h4v2" />
+      <path d="M8 7l.8 12h6.4L16 7" />
+    </>
+  ),
 } as const
 
 export type UiIconName = keyof typeof PATHS

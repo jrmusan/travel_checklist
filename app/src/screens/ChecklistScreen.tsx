@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ProgressBar } from '../components/ProgressCard'
 import { CheckAll } from '../components/CheckAll'
+import { ConfirmRemoveSheet, ItemSheet } from '../components/ItemSheet'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { ArtIcon } from '../components/icons/ArtIcon'
 import { UiIcon } from '../components/icons/UiIcon'
@@ -17,6 +18,9 @@ interface ChecklistScreenProps {
   checkedIds: Set<string>
   onToggle: (itemId: string) => void
   onSetChecked: (itemIds: string[], checked: boolean) => void
+  onAddItem: (input: { categoryId: string; label: string }) => string | null
+  onUpdateItem: (itemId: string, input: { label: string; categoryId: string }) => string | null
+  onRemoveItem: (itemId: string) => void
   onBack: () => void
   onStartTrip: () => void
   packFilter: PackFilter
@@ -34,6 +38,9 @@ export function ChecklistScreen({
   checkedIds,
   onToggle,
   onSetChecked,
+  onAddItem,
+  onUpdateItem,
+  onRemoveItem,
   onBack,
   onStartTrip,
   packFilter,
@@ -43,6 +50,14 @@ export function ChecklistScreen({
   focusSearch,
 }: ChecklistScreenProps) {
   const [query, setQuery] = useState('')
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
+  const [itemSheet, setItemSheet] = useState<
+    | { mode: 'add'; categoryId: string }
+    | { mode: 'edit'; itemId: string }
+    | null
+  >(null)
+  const [removeItem, setRemoveItem] = useState<MasterItem | null>(null)
+  const [sheetError, setSheetError] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const disabled = !activeTrip
 
@@ -92,7 +107,10 @@ export function ChecklistScreen({
         const packedCount = all.filter((i) => checkedIds.has(i.id)).length
         return { cat, all, visible, total: all.length, packedCount, ...categoryArt(cat) }
       })
-      .filter((s) => s.visible.length > 0)
+      .filter((s) => {
+        if (normalizedQuery || packFilter === 'remaining') return s.visible.length > 0
+        return true
+      })
   }, [categories, categoryFilter, itemsByCategory, normalizedQuery, packFilter, checkedIds])
 
   const completions = useMemo(
@@ -202,19 +220,29 @@ export function ChecklistScreen({
         ) : (
           sections.map(({ cat, all, visible, total: catTotal, packedCount, art }) => {
             const expanded = isExpanded(cat.id)
+            const editing = editingCategoryId === cat.id
             const headerId = `category-header-${cat.id}`
             const panelId = `category-panel-${cat.id}`
             const complete = catTotal > 0 && packedCount === catTotal
+            const catName = categoryLabel(cat)
 
             return (
               <section
                 key={cat.id}
-                className={complete ? 'card category-card is-complete' : 'card category-card'}
+                className={[
+                  'card category-card',
+                  complete ? 'is-complete' : '',
+                  editing ? 'is-editing' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
                 data-complete={complete ? 'true' : 'false'}
+                data-editing={editing ? 'true' : 'false'}
+                data-category-id={cat.id}
               >
                 <h2 className="category-heading">
                   <CheckAll
-                    label={categoryLabel(cat)}
+                    label={catName}
                     packed={packedCount}
                     total={catTotal}
                     disabled={disabled}
@@ -229,7 +257,7 @@ export function ChecklistScreen({
                     onClick={() => toggleExpanded(cat.id)}
                   >
                     <ArtIcon name={art} size={30} className="category-art" />
-                    <span className="category-name">{categoryLabel(cat)}</span>
+                    <span className="category-name">{catName}</span>
                     <span
                       className={complete ? 'count-pill count-pill--done' : 'count-pill'}
                       aria-label={`${packedCount} of ${catTotal} packed`}
@@ -238,45 +266,96 @@ export function ChecklistScreen({
                     </span>
                     <UiIcon name="chevronDown" size={20} className="category-chevron" />
                   </button>
+                  <button
+                    type="button"
+                    className={editing ? 'icon-btn category-edit is-on' : 'icon-btn category-edit'}
+                    aria-pressed={editing}
+                    aria-label={editing ? `Done editing ${catName}` : `Edit ${catName}`}
+                    onClick={() => {
+                      if (editing) {
+                        setEditingCategoryId(null)
+                        return
+                      }
+                      setEditingCategoryId(cat.id)
+                      if (!isExpanded(cat.id)) expand(cat.id)
+                    }}
+                  >
+                    <UiIcon name={editing ? 'check' : 'pencil'} size={20} />
+                  </button>
                 </h2>
                 <div
                   className={expanded ? 'category-panel is-open' : 'category-panel'}
                   data-expanded={expanded ? 'true' : 'false'}
                 >
-                  <div className="category-panel-inner">
+                  <div className="category-panel-inner" inert={!expanded || undefined}>
                     <ul
                       id={panelId}
                       role="region"
                       aria-labelledby={headerId}
                       aria-hidden={!expanded}
-                      inert={!expanded}
                       className="item-list"
                     >
                       {visible.map((item) => {
                         const checked = checkedIds.has(item.id)
                         return (
-                          <li key={item.id}>
-                            <label className={checked ? 'item-row is-checked' : 'item-row'}>
-                              <input
-                                type="checkbox"
-                                className="visually-hidden"
-                                checked={checked}
-                                disabled={disabled}
-                                onChange={() => onToggle(item.id)}
-                                tabIndex={expanded ? 0 : -1}
-                              />
-                              <span className="check-circle" aria-hidden>
-                                <UiIcon name="check" size={16} strokeWidth={3} />
-                              </span>
-                              <span className="item-art" aria-hidden>
-                                <ArtIcon name={itemArt(item, art)} size={24} />
-                              </span>
-                              <span className="item-label">{item.label}</span>
-                            </label>
+                          <li key={item.id} data-item-id={item.id}>
+                            <div className={checked ? 'item-row-wrap is-checked' : 'item-row-wrap'}>
+                              <label className={checked ? 'item-row is-checked' : 'item-row'}>
+                                <input
+                                  type="checkbox"
+                                  className="visually-hidden"
+                                  checked={checked}
+                                  disabled={disabled}
+                                  onChange={() => onToggle(item.id)}
+                                  tabIndex={expanded ? 0 : -1}
+                                />
+                                <span className="check-circle" aria-hidden>
+                                  <UiIcon name="check" size={16} strokeWidth={3} />
+                                </span>
+                                <span className="item-art" aria-hidden>
+                                  <ArtIcon name={itemArt(item, art)} size={24} />
+                                </span>
+                                <span className="item-label">{item.label}</span>
+                              </label>
+                              {editing && (
+                                <div className="item-row-actions">
+                                  <button
+                                    type="button"
+                                    className="icon-btn"
+                                    aria-label={`Edit ${item.label}`}
+                                    onClick={() => {
+                                      setSheetError(null)
+                                      setItemSheet({ mode: 'edit', itemId: item.id })
+                                    }}
+                                  >
+                                    <UiIcon name="pencil" size={18} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="icon-btn item-delete"
+                                    aria-label={`Remove ${item.label}`}
+                                    onClick={() => setRemoveItem(item)}
+                                  >
+                                    <UiIcon name="trash" size={18} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </li>
                         )
                       })}
                     </ul>
+                    <button
+                      type="button"
+                      className="add-item-btn"
+                      onClick={() => {
+                        setSheetError(null)
+                        setItemSheet({ mode: 'add', categoryId: cat.id })
+                      }}
+                    >
+                      <UiIcon name="plus" size={18} strokeWidth={2.4} />
+                      Add item
+                    </button>
                   </div>
                 </div>
               </section>
@@ -284,6 +363,57 @@ export function ChecklistScreen({
           })
         )}
       </div>
+
+      {itemSheet && (
+        <ItemSheet
+          mode={itemSheet.mode}
+          initial={
+            itemSheet.mode === 'add'
+              ? { label: '', categoryId: itemSheet.categoryId }
+              : {
+                  label: items.find((i) => i.id === itemSheet.itemId)?.label ?? '',
+                  categoryId: items.find((i) => i.id === itemSheet.itemId)?.categoryId ?? categories[0]?.id ?? '',
+                }
+          }
+          categories={categories}
+          error={sheetError}
+          onClose={() => {
+            setItemSheet(null)
+            setSheetError(null)
+          }}
+          onSave={(values) => {
+            const error =
+              itemSheet.mode === 'add'
+                ? onAddItem({ categoryId: values.categoryId, label: values.label })
+                : onUpdateItem(itemSheet.itemId, values)
+            if (error) {
+              setSheetError(error)
+              return
+            }
+            if (itemSheet.mode === 'add') {
+              setEditingCategoryId(values.categoryId)
+              expand(values.categoryId)
+            }
+            setItemSheet(null)
+            setSheetError(null)
+          }}
+        />
+      )}
+
+      {removeItem && (
+        <ConfirmRemoveSheet
+          itemLabel={removeItem.label}
+          categoryLabel={(() => {
+            const cat = categories.find((c) => c.id === removeItem.categoryId)
+            return cat ? categoryLabel(cat) : 'this list'
+          })()}
+          onClose={() => setRemoveItem(null)}
+          onConfirm={() => {
+            onRemoveItem(removeItem.id)
+            setRemoveItem(null)
+          }}
+        />
+      )}
     </div>
   )
 }

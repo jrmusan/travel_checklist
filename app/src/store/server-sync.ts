@@ -1,15 +1,15 @@
 import type { ServerTripStatePayload } from '../api/client'
 import type { PersistedState } from '../types'
-import { createInitialState, loadLegacyLocalTripSlice } from './persistence'
+import { resolveTeamCatalog } from './catalog'
+import { loadLegacyLocalTripSlice } from './persistence'
 
-/** Master pool always comes from the client seed; trips/progress from the server. */
-export function mergeServerIntoPersisted(
-  server: ServerTripStatePayload,
-  masterPool = createInitialState().masterPool,
-): PersistedState {
+/** Team catalog lives on the same JSON blob as trips; seed if the team has none yet. */
+export function mergeServerIntoPersisted(server: ServerTripStatePayload): PersistedState {
+  const { masterPool, removedItemIds } = resolveTeamCatalog(server.catalog, server.removedItemIds)
   return {
     schemaVersion: server.schemaVersion,
     masterPool,
+    removedItemIds,
     trips: server.trips,
     activeTripId: server.activeTripId,
     progressByTripId: server.progressByTripId,
@@ -22,6 +22,8 @@ export function extractServerSlice(state: PersistedState): ServerTripStatePayloa
     trips: state.trips,
     activeTripId: state.activeTripId,
     progressByTripId: state.progressByTripId,
+    catalog: state.masterPool,
+    removedItemIds: state.removedItemIds,
   }
 }
 
@@ -42,6 +44,7 @@ export function mergeLegacyLocalIfNeeded(server: ServerTripStatePayload): Server
     return server
   }
   return {
+    ...server,
     schemaVersion: 2,
     trips: legacy.trips,
     activeTripId: legacy.activeTripId,
