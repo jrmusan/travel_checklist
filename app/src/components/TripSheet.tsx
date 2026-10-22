@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import {
+  DATE_INPUT_MAX,
+  DATE_INPUT_MIN,
   TRIP_NAME_MAX,
   addDaysIso,
   defaultTripDates,
@@ -194,6 +196,8 @@ export function TripSheet({
                   type="date"
                   name="startDate"
                   value={form.startDate}
+                  min={DATE_INPUT_MIN}
+                  max={DATE_INPUT_MAX}
                   onChange={(e) => patch('startDate', e.target.value)}
                   required
                   aria-label="Start date"
@@ -205,7 +209,8 @@ export function TripSheet({
                   type="date"
                   name="endDate"
                   value={form.endDate}
-                  min={form.startDate}
+                  min={form.startDate || DATE_INPUT_MIN}
+                  max={DATE_INPUT_MAX}
                   onChange={(e) => patch('endDate', e.target.value)}
                   required
                   aria-label="End date"

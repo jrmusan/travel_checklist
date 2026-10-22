@@ -9,6 +9,10 @@ export const TRIP_NAME_MAX = 80
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
+/** Explicit bounds so iOS Safari does not treat an omitted min as “today only”. */
+export const DATE_INPUT_MIN = '1900-01-01'
+export const DATE_INPUT_MAX = '2100-12-31'
+
 const shortDate = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
 
 /** Stable per-trip banner so a trip keeps its picture across sessions. */
