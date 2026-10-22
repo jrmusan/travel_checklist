@@ -118,10 +118,12 @@ In the Vercel project: **Settings → General → Root Directory** → `app` (Ap
 | --- | --- |
 | **Root Directory** | `app` |
 | **Install Command** | *(default)* `npm install` |
-| **Build Command** | *(default)* `npm run build` |
+| **Build Command** | *(default)* `npm run vercel-build` (runs `db:migrate` then `build` when Root Directory is `app`) |
 | **Output Directory** | *(default)* `dist` |
 
 SPA client routing + `/api` serverless functions are configured in [`app/vercel.json`](app/vercel.json).
+
+Each production deploy applies [`app/db/schema.sql`](app/db/schema.sql) idempotently (`CREATE … IF NOT EXISTS`) as long as **`POSTGRES_URL`** is available at build time (normal when Postgres/Neon is linked to the project).
 
 #### B. Repo root — no Root Directory override
 
@@ -131,12 +133,10 @@ Leave **Root Directory** empty. Root [`vercel.json`](vercel.json) builds `app/di
 
 1. In the Vercel project, open **Storage** → **Create Database** → **Postgres** (or connect an existing Neon project and copy its connection string).
 2. Link the database to this project so **`POSTGRES_URL`** is injected automatically (Production and Preview as you prefer).
-3. Locally or via `psql`, run the schema once against that database:
-   ```bash
-   cd app
-   export POSTGRES_URL="…"   # same URL Vercel shows
-   npm run db:migrate
-   ```
+3. **First schema apply** — pick one (see [Fix: `relation "teams" does not exist`](#fix-relation-teams-does-not-exist) if signup fails):
+   - Redeploy with Postgres linked (build runs `npm run vercel-build` → auto-migrate), or
+   - Run locally: `cd app && POSTGRES_URL="…" npm run db:migrate`, or
+   - Neon **SQL Editor**: paste [`app/db/schema.sql`](app/db/schema.sql) and run.
 4. Redeploy after storage is linked so serverless functions receive `POSTGRES_URL`.
 
 ### 4. Environment variables
@@ -147,6 +147,7 @@ In **Project → Settings → Environment Variables**:
 | --- | --- | --- |
 | `POSTGRES_URL` | Production, Preview | Usually auto-set when Postgres is linked; otherwise paste from Neon |
 | `SESSION_SECRET` | Production, Preview | Generate a long random string (e.g. `openssl rand -base64 32`) — **never commit** |
+| `SETUP_SECRET` | Production *(optional)* | Enables one-time `GET /api/setup/migrate?secret=…` (≥16 chars); remove or rotate after use |
 
 Redeploy after adding or changing variables.
 
@@ -161,6 +162,38 @@ Project → **Settings → Domains** → add e.g. `checklist.example.com` and fo
 3. Start a camper trip, check an item (it stays in place in **Full list**), switch to **Still to pack**, collapse a category and confirm `3/12`-style progress in the header.
 4. Open the same team on another browser or device — checkmarks should match.
 5. **Log out** and sign back in.
+
+---
+
+## Fix: `relation "teams" does not exist`
+
+Signup or sign-in returns **500** and logs `NeonDbError: relation "teams" does not exist` when Postgres is linked but the schema was never applied.
+
+**Option A — Neon / Postgres SQL console**
+
+1. Open your database in the [Neon dashboard](https://console.neon.tech) (or Vercel Storage → your DB → query UI).
+2. Paste the full contents of [`app/db/schema.sql`](app/db/schema.sql) and execute.
+3. Retry **Create account** on the live site.
+
+**Option B — Local CLI**
+
+```bash
+cd app
+export POSTGRES_URL="…"   # same connection string as Vercel Production
+npm run db:migrate
+```
+
+**Option C — Auto-migrate on deploy (after this repo is on `main`)**
+
+With **Root Directory** `app` and **`POSTGRES_URL`** set for Production, Vercel runs `npm run vercel-build`, which runs `db:migrate` before the Vite build. Redeploy once; tables are created if missing.
+
+**Option D — One-time HTTP setup (optional)**
+
+1. Set `SETUP_SECRET` (≥16 characters) on the Vercel project and redeploy.
+2. Open `https://YOUR-DOMAIN/api/setup/migrate?secret=YOUR_SETUP_SECRET` once in the browser.
+3. Expect `{"ok":true,...}`. Rotate or remove `SETUP_SECRET` when done.
+
+Validate the schema file without a database: `cd app && npm run db:migrate:check`.
 
 ---
 
