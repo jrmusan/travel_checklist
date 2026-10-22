@@ -1,9 +1,15 @@
 import bannerCoast from '../assets/scenes/banner-coast.webp'
 import bannerGorge from '../assets/scenes/banner-gorge.webp'
 import bannerLake from '../assets/scenes/banner-mountain-lake.webp'
-import type { MasterItem, PersistedState, TripInstance } from '../types'
+import type { MasterItem, PersistedState, TripInstance, TripPlan } from '../types'
 
 const BANNERS = [bannerLake, bannerGorge, bannerCoast]
+
+export const TRIP_NAME_MAX = 80
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+const shortDate = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
 
 /** Stable per-trip banner so a trip keeps its picture across sessions. */
 export function tripBanner(trip: TripInstance | null): string {
@@ -13,9 +19,80 @@ export function tripBanner(trip: TripInstance | null): string {
   return BANNERS[hash % BANNERS.length]
 }
 
-const shortDate = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
+export function toIsoDate(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+export function todayIso(now = new Date()): string {
+  return toIsoDate(now)
+}
+
+export function parseDateOnly(iso: string): Date | null {
+  if (!ISO_DATE.test(iso)) return null
+  const [y, m, d] = iso.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null
+  return date
+}
+
+export function addDaysIso(iso: string, days: number): string | null {
+  const date = parseDateOnly(iso)
+  if (!date) return null
+  date.setDate(date.getDate() + days)
+  return toIsoDate(date)
+}
+
+/** Inclusive calendar days (same start and end → 1). */
+export function inclusiveDays(startIso: string, endIso: string): number {
+  const start = parseDateOnly(startIso)
+  const end = parseDateOnly(endIso)
+  if (!start || !end) return 1
+  const ms = end.getTime() - start.getTime()
+  return Math.max(1, Math.round(ms / 86_400_000) + 1)
+}
+
+export function defaultTripDates(now = new Date()): { startDate: string; endDate: string } {
+  const startDate = todayIso(now)
+  const endDate = addDaysIso(startDate, 6) ?? startDate
+  return { startDate, endDate }
+}
+
+export function normalizeTripName(raw: string): string | null {
+  const name = raw.trim().replace(/\s+/g, ' ')
+  if (!name || name.length > TRIP_NAME_MAX) return null
+  return name
+}
+
+export function validateTripPlan(input: { name: string; startDate: string; endDate: string }): TripPlan | string {
+  const name = normalizeTripName(input.name)
+  if (!name) return `Destination is required (1–${TRIP_NAME_MAX} characters).`
+  const start = parseDateOnly(input.startDate)
+  const end = parseDateOnly(input.endDate)
+  if (!start) return 'Pick a start date.'
+  if (!end) return 'Pick an end date.'
+  if (end.getTime() < start.getTime()) return 'End date cannot be before the start.'
+  return { name, startDate: input.startDate, endDate: input.endDate }
+}
+
+export function tripDisplayName(trip: TripInstance, typeName: string): string {
+  const name = trip.name?.trim()
+  return name || typeName
+}
+
+export function formatDateLabel(iso: string): string {
+  const date = parseDateOnly(iso)
+  return date ? shortDate.format(date) : iso
+}
 
 export function tripDateRange(trip: TripInstance): string {
+  if (trip.startDate) {
+    const start = formatDateLabel(trip.startDate)
+    if (!trip.endDate || trip.endDate === trip.startDate) return start
+    return `${start} – ${formatDateLabel(trip.endDate)}`
+  }
   const start = shortDate.format(new Date(trip.startedAt))
   if (!trip.endedAt) return `${start} – now`
   const end = shortDate.format(new Date(trip.endedAt))
@@ -23,9 +100,15 @@ export function tripDateRange(trip: TripInstance): string {
 }
 
 export function tripDayCount(trip: TripInstance): number {
+  if (trip.startDate && trip.endDate) return inclusiveDays(trip.startDate, trip.endDate)
   const end = trip.endedAt ? new Date(trip.endedAt) : new Date()
   const ms = end.getTime() - new Date(trip.startedAt).getTime()
   return Math.max(1, Math.ceil(ms / 86_400_000))
+}
+
+export function tripScheduleLabel(trip: TripInstance): string {
+  const days = tripDayCount(trip)
+  return `${tripDateRange(trip)} · ${days} ${days === 1 ? 'day' : 'days'}`
 }
 
 export function tripProgress(state: PersistedState, trip: TripInstance, items: MasterItem[]) {

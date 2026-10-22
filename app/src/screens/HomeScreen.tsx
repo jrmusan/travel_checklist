@@ -2,7 +2,7 @@ import { ProgressCard } from '../components/ProgressCard'
 import { TripCard } from '../components/TripCard'
 import { ArtIcon, type ArtName } from '../components/icons/ArtIcon'
 import { UiIcon } from '../components/icons/UiIcon'
-import { greeting, tripDateRange, tripDayCount } from '../lib/trips'
+import { greeting, tripDisplayName, tripScheduleLabel } from '../lib/trips'
 import type { TripInstance, TripTypeDefinition } from '../types'
 
 interface HomeScreenProps {
@@ -18,6 +18,7 @@ interface HomeScreenProps {
   onOpenSearch: () => void
   onOpenSettings: () => void
   onStartTrip: () => void
+  onEditTrip: () => void
 }
 
 export function HomeScreen({
@@ -33,6 +34,7 @@ export function HomeScreen({
   onOpenSearch,
   onOpenSettings,
   onStartTrip,
+  onEditTrip,
 }: HomeScreenProps) {
   const remaining = total - packed
   const tiles: { label: string; art: ArtName; onClick: () => void; meta?: string }[] = [
@@ -56,7 +58,9 @@ export function HomeScreen({
           <p className="home-hello">{greeting()},</p>
           <h1 className="home-name">{teamName}</h1>
           <p className="home-tagline">
-            {activeTrip ? `Day ${tripDayCount(activeTrip)} of your trip` : 'Next adventure is calling!'}
+            {activeTrip
+              ? `${tripScheduleLabel(activeTrip)}`
+              : 'Next adventure is calling!'}
           </p>
         </div>
         <button type="button" className="avatar" aria-label="Team settings" onClick={onOpenSettings}>
@@ -66,13 +70,23 @@ export function HomeScreen({
 
       <div className="home-hero">
         {activeTrip ? (
-          <TripCard
-            trip={activeTrip}
-            title={tripType.name}
-            dates={tripDateRange(activeTrip)}
-            badge={<span className="chip chip--on-art">Active trip</span>}
-            onClick={onOpenChecklist}
-          />
+          <>
+            <TripCard
+              trip={activeTrip}
+              title={tripDisplayName(activeTrip, tripType.name)}
+              dates={tripScheduleLabel(activeTrip)}
+              badge={<span className="chip chip--on-art">{tripType.name}</span>}
+              onClick={onOpenChecklist}
+            />
+            <button
+              type="button"
+              className="trip-card-edit"
+              aria-label="Edit trip name or dates"
+              onClick={onEditTrip}
+            >
+              <UiIcon name="pencil" size={20} />
+            </button>
+          </>
         ) : (
           <TripCard trip={null} title="No trip underway" dates="Ready when you are">
             <button type="button" className="btn btn-primary trip-card-cta" onClick={onStartTrip}>

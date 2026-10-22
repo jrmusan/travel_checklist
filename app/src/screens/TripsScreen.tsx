@@ -3,7 +3,7 @@ import { ScreenHeader } from '../components/ScreenHeader'
 import { TripCard } from '../components/TripCard'
 import { ArtIcon } from '../components/icons/ArtIcon'
 import { UiIcon } from '../components/icons/UiIcon'
-import { percent, tripDateRange } from '../lib/trips'
+import { percent, tripDisplayName, tripScheduleLabel } from '../lib/trips'
 import type { TripInstance, TripTypeDefinition } from '../types'
 
 interface TripsScreenProps {
@@ -67,13 +67,9 @@ export function TripsScreen({ trips, tripTypes, progressFor, onOpenTrip, onNewTr
                 key={trip.id}
                 trip={trip}
                 size="list"
-                title={typeName(trip)}
-                dates={tripDateRange(trip)}
-                badge={
-                  <span className="chip chip--on-art">
-                    {packed}/{total} packed · {percent(packed, total)}%
-                  </span>
-                }
+                title={tripDisplayName(trip, typeName(trip))}
+                dates={`${tripScheduleLabel(trip)} · ${packed}/${total} packed · ${percent(packed, total)}%`}
+                badge={<span className="chip chip--on-art">{typeName(trip)}</span>}
                 onClick={trip.status === 'active' ? () => onOpenTrip(trip) : undefined}
               />
             )

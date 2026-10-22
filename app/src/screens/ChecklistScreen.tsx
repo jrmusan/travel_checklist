@@ -7,7 +7,7 @@ import { ArtIcon } from '../components/icons/ArtIcon'
 import { UiIcon } from '../components/icons/UiIcon'
 import { useAutoCollapseOnComplete, useCategoryExpanded } from '../hooks/useCategoryExpanded'
 import { categoryArt, categoryLabel, itemArt } from '../lib/catalog-art'
-import { percent, tripDateRange, tripDayCount } from '../lib/trips'
+import { percent, tripDisplayName, tripScheduleLabel } from '../lib/trips'
 import type { MasterCategory, MasterItem, PackFilter, TripInstance, TripTypeDefinition } from '../types'
 
 interface ChecklistScreenProps {
@@ -140,13 +140,12 @@ export function ChecklistScreen({
   const packed = items.filter((i) => checkedIds.has(i.id)).length
   const pct = percent(packed, total)
 
-  const subtitle = activeTrip
-    ? `${tripDateRange(activeTrip)} · ${tripDayCount(activeTrip)} ${tripDayCount(activeTrip) === 1 ? 'day' : 'days'}`
-    : 'No trip underway'
+  const subtitle = activeTrip ? tripScheduleLabel(activeTrip) : 'No trip underway'
+  const heading = activeTrip ? tripDisplayName(activeTrip, tripType.name) : tripType.name
 
   return (
     <div className="screen screen--checklist">
-      <ScreenHeader title={tripType.name} subtitle={subtitle} onBack={onBack}>
+      <ScreenHeader title={heading} subtitle={subtitle} onBack={onBack}>
         <div className="header-progress">
           <ProgressBar pct={activeTrip ? pct : 0} tone="light" />
           <span>{activeTrip ? `${packed} / ${total}` : `${total} items`}</span>

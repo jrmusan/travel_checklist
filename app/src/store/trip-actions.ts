@@ -1,17 +1,24 @@
-import type { PersistedState, TripTypeId } from '../types'
+import type { PersistedState, TripPlan, TripTypeId } from '../types'
 import { createEmptyProgress } from './persistence'
 
 function newTripId(): string {
   return crypto.randomUUID()
 }
 
-export function startTrip(state: PersistedState, tripTypeId: TripTypeId): PersistedState {
+export function startTrip(
+  state: PersistedState,
+  tripTypeId: TripTypeId,
+  plan: TripPlan,
+): PersistedState {
   const id = newTripId()
   const trip = {
     id,
     tripTypeId,
     startedAt: new Date().toISOString(),
     status: 'active' as const,
+    name: plan.name,
+    startDate: plan.startDate,
+    endDate: plan.endDate,
   }
 
   const nextTrips = state.trips.map((t) =>
@@ -28,6 +35,19 @@ export function startTrip(state: PersistedState, tripTypeId: TripTypeId): Persis
       ...state.progressByTripId,
       [id]: createEmptyProgress(),
     },
+  }
+}
+
+export function updateTrip(
+  state: PersistedState,
+  tripId: string,
+  plan: TripPlan,
+): PersistedState {
+  return {
+    ...state,
+    trips: state.trips.map((t) =>
+      t.id === tripId ? { ...t, name: plan.name, startDate: plan.startDate, endDate: plan.endDate } : t,
+    ),
   }
 }
 

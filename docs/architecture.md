@@ -20,10 +20,10 @@ Trip types are registered in `app/src/trip-types/registry.ts`. The UI lists type
 | Layer | What it stores | Lifetime |
 |--------|----------------|----------|
 | **Master pool** | Catalog of categories and items per trip type | Seeded from registry markdown on first team load, then **stored per team** as JSON on `team_trip_state.state.catalog` |
-| **Trip instance** | One packing run for a trip type (`startedAt`, `status`) | Many per type over time; **stored per team on the server** |
+| **Trip instance** | One packing run: type, optional `name` (destination), `startDate`/`endDate`, `startedAt`, `status` | Many per type over time; **stored per team on the server** |
 | **Trip progress** | Which master item ids are checked for that instance | Reset on each new trip; **stored per team on the server** |
 
-Starting a trip creates a new instance with **empty** progress. Ending a trip (or “End & start next”) marks the instance ended. Catalog edits (add/rename/move/delete items) change the team master pool for that trip type and apply to future trips; only checkmarks are trip-scoped.
+Starting a trip creates a new instance with **empty** progress, a destination name, and calendar dates. Ending a trip archives that name/dates; the next trip is a clean packing slate (new name + dates). Older trips without `name` fall back to the trip-type label. Catalog edits (add/rename/move/delete items) change the team master pool for that trip type and apply to future trips; only checkmarks are trip-scoped.
 
 ### Team auth and shared state
 

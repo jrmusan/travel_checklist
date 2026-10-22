@@ -26,9 +26,10 @@ import {
   setItemsChecked,
   startTrip,
   toggleItemChecked,
+  updateTrip,
 } from './store/trip-actions'
 import { listTripTypes } from './trip-types/registry'
-import type { PackFilter, TripInstance, TripTypeId } from './types'
+import type { PackFilter, TripInstance, TripPlan, TripTypeId } from './types'
 
 function useHistoryView(): [View, (next: View) => void] {
   const [view, setView] = useState<View>(() =>
@@ -68,6 +69,7 @@ function App() {
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [focusSearch, setFocusSearch] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [sheetMode, setSheetMode] = useState<'manage' | 'create' | 'edit' | 'next' | undefined>()
   const [showComplete, setShowComplete] = useState(false)
 
   const selectedType = tripTypes.find((t) => t.id === selectedTypeId) ?? tripTypes[0]
@@ -124,8 +126,28 @@ function App() {
     navigate('checklist')
   }
 
-  const handleStart = () => {
-    update((s) => startTrip(s, selectedTypeId))
+  const openTripSheet = (mode?: 'manage' | 'create' | 'edit' | 'next') => {
+    setSheetMode(mode)
+    setSheetOpen(true)
+  }
+
+  const handleStart = (plan: TripPlan) => {
+    update((s) => startTrip(s, selectedTypeId, plan))
+    setSheetOpen(false)
+    openChecklist()
+  }
+
+  const handleUpdateTrip = (plan: TripPlan) => {
+    if (!activeForSelected) return
+    update((s) => updateTrip(s, activeForSelected.id, plan))
+    setSheetOpen(false)
+  }
+
+  const handleStartNext = (plan: TripPlan) => {
+    update((s) => {
+      const ended = activeForSelected ? endTrip(s, activeForSelected.id) : s
+      return startTrip(ended, selectedTypeId, plan)
+    })
     setSheetOpen(false)
     openChecklist()
   }
@@ -195,7 +217,7 @@ function App() {
           onUpdateItem={handleUpdateItem}
           onRemoveItem={handleRemoveItem}
           onBack={() => navigate('home')}
-          onStartTrip={() => setSheetOpen(true)}
+          onStartTrip={() => openTripSheet()}
           packFilter={packFilter}
           onPackFilter={setPackFilter}
           categoryFilter={categoryFilter}
@@ -228,7 +250,7 @@ function App() {
             setSelectedTypeId(trip.tripTypeId)
             openChecklist()
           }}
-          onNewTrip={() => setSheetOpen(true)}
+          onNewTrip={() => openTripSheet()}
         />
       )
       break
@@ -263,7 +285,8 @@ function App() {
           onOpenTrips={() => navigate('trips')}
           onOpenSearch={() => openChecklist({ search: true })}
           onOpenSettings={() => navigate('settings')}
-          onStartTrip={() => setSheetOpen(true)}
+          onStartTrip={() => openTripSheet()}
+          onEditTrip={() => openTripSheet('edit')}
         />
       )
   }
@@ -281,29 +304,26 @@ function App() {
       <BottomNav
         view={view}
         onNavigate={(next) => (next === 'checklist' ? openChecklist() : navigate(next))}
-        onPlus={() => setSheetOpen(true)}
+        onPlus={() => openTripSheet()}
         plusLabel={activeForSelected ? 'Manage trip' : 'Start a trip'}
       />
 
       {sheetOpen && (
         <TripSheet
+          key={`${sheetMode ?? 'auto'}-${activeForSelected?.id ?? 'none'}`}
           tripTypes={tripTypes}
           selectedTypeId={selectedTypeId}
           onSelectType={setSelectedTypeId}
           activeTrip={activeForSelected}
+          typeName={selectedType.name}
+          initialMode={sheetMode}
           onStart={handleStart}
+          onUpdate={handleUpdateTrip}
           onEnd={() => {
             if (activeForSelected) update((s) => endTrip(s, activeForSelected.id))
             setSheetOpen(false)
           }}
-          onStartNext={() => {
-            update((s) => {
-              const ended = activeForSelected ? endTrip(s, activeForSelected.id) : s
-              return startTrip(ended, selectedTypeId)
-            })
-            setSheetOpen(false)
-            openChecklist()
-          }}
+          onStartNext={handleStartNext}
           onClose={closeSheet}
         />
       )}
@@ -313,7 +333,7 @@ function App() {
           onView={closeComplete}
           onPlan={() => {
             setShowComplete(false)
-            setSheetOpen(true)
+            openTripSheet()
           }}
         />
       )}

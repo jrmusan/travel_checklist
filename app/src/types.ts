@@ -40,6 +40,17 @@ export interface TripInstance {
   startedAt: string;
   endedAt?: string;
   status: TripStatus;
+  /** Destination / trip name. Older trips omit this and fall back to the type label. */
+  name?: string;
+  /** Calendar dates (YYYY-MM-DD). Distinct from packing `startedAt`. */
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface TripPlan {
+  name: string;
+  startDate: string;
+  endDate: string;
 }
 
 /** Per-trip packing progress only — never mutates the master pool. */
