@@ -1,11 +1,7 @@
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+@import './styles/theme.css';
 
 :root {
-  /* Bark, forest, moss — national-park trail palette */
+  /* Bark, forest, moss — national-park trail palette (light) */
   --color-bark: #4a3728;
   --color-bark-deep: #3d2e22;
   --color-pine: #1e3d2f;
@@ -76,6 +72,64 @@
   color-scheme: light;
 }
 
+/* Field-guide dark palette (from theme.css) mapped onto app tokens */
+:root[data-theme='dark'] {
+  --color-bark: var(--ink-muted);
+  --color-bark-deep: var(--ink);
+  --color-pine: var(--done);
+  --color-pine-deep: var(--done);
+  --color-forest: var(--done);
+  --color-moss: var(--done);
+  --color-sage: var(--ink-muted);
+  --color-sage-mist: var(--line);
+  --color-lantern: var(--accent);
+  --color-lantern-glow: var(--accent);
+  --color-parchment: var(--surface);
+  --color-canvas: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-muted);
+  --color-ink-faint: var(--ink-muted);
+
+  --color-bg-top: var(--bg);
+  --color-bg: var(--surface);
+  --color-bg-bottom: var(--surface-2);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-2);
+  --color-surface-elevated: var(--surface);
+  --color-border: var(--line);
+  --color-border-wood: var(--line);
+  --color-border-soft: var(--line);
+  --color-text: var(--ink);
+  --color-text-muted: var(--ink-muted);
+  --color-text-subtle: var(--ink-muted);
+  --color-text-faint: var(--ink-muted);
+
+  --color-primary: var(--done);
+  --color-primary-hover: var(--done);
+  --color-primary-soft: var(--surface-2);
+  --color-primary-muted: var(--done);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent);
+  --color-accent-soft: var(--surface-2);
+  --color-accent-glow: color-mix(in srgb, var(--accent) 35%, transparent);
+
+  --color-progress-track: var(--surface-2);
+  --color-progress-fill-start: var(--done);
+  --color-progress-fill-mid: var(--accent);
+  --color-progress-fill-end: var(--accent);
+
+  --color-filter-active: var(--ink);
+  --color-chip-active-border: var(--accent);
+  --color-chip-active-bg: var(--surface-2);
+
+  --shadow-soft: var(--shadow);
+  --shadow-card: var(--shadow);
+  --shadow-button: var(--shadow);
+  color-scheme: dark;
+}
+
 [data-trip-type='camper'] {
   --color-accent: #d4a017;
   --color-accent-soft: #faf0d4;
@@ -105,7 +159,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Topo contour lines — soft trail-map atmosphere */
+:root[data-theme='dark'] body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
 body::before {
   content: '';
   position: fixed;
@@ -118,7 +176,10 @@ body::before {
   background-position: center top;
 }
 
-/* Distant forest silhouette at bottom */
+:root[data-theme='dark'] body::before {
+  opacity: 0.12;
+}
+
 body::after {
   content: '';
   position: fixed;
@@ -131,6 +192,10 @@ body::after {
   opacity: 0.12;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath fill='%231e3d2f' d='M0 120 L0 80 L40 50 L60 75 L90 40 L120 70 L150 35 L180 65 L220 30 L260 60 L300 25 L340 55 L380 20 L420 50 L460 15 L500 45 L540 10 L580 40 L620 5 L660 35 L700 0 L740 30 L780 5 L820 35 L860 10 L900 40 L940 15 L980 45 L1020 20 L1060 50 L1100 25 L1140 55 L1200 30 L1200 120 Z'/%3E%3C/svg%3E");
   background-size: 100% 100%;
+}
+
+:root[data-theme='dark'] body::after {
+  opacity: 0.06;
 }
 
 #root {

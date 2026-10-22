@@ -2,16 +2,19 @@ import { useMemo, useState } from 'react'
 import { HeaderArt } from './components/HeaderArt'
 import { LoginPage } from './components/LoginPage'
 import { PackView } from './components/PackView'
+import { ThemeToggle } from './components/ThemeToggle'
 import { TripControls } from './components/TripControls'
 import { TripTypePicker } from './components/TripTypePicker'
 import { useAuth } from './hooks/useAuth'
 import { useTeamPersistedState } from './hooks/useTeamPersistedState'
+import { useTheme } from './hooks/useTheme'
 import { endTrip, itemsForTripType, startTrip, toggleItemChecked } from './store/trip-actions'
 import { listTripTypes } from './trip-types/registry'
 import type { TripTypeId } from './types'
 import './App.css'
 
 function App() {
+  const { theme, toggle: toggleTheme } = useTheme()
   const { team, loading: authLoading, error: authError, setError, login, register, logout } =
     useAuth()
   const tripTypes = listTripTypes()
@@ -47,16 +50,21 @@ function App() {
 
   if (!team) {
     return (
-      <LoginPage
-        error={authError}
-        onClearError={() => setError(null)}
-        onSignIn={async (teamName, password) => {
-          await login(teamName, password)
-        }}
-        onSignUp={async (teamName, password, confirmPassword) => {
-          await register(teamName, password, confirmPassword)
-        }}
-      />
+      <>
+        <div className="login-theme-bar">
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </div>
+        <LoginPage
+          error={authError}
+          onClearError={() => setError(null)}
+          onSignIn={async (teamName, password) => {
+            await login(teamName, password)
+          }}
+          onSignUp={async (teamName, password, confirmPassword) => {
+            await register(teamName, password, confirmPassword)
+          }}
+        />
+      </>
     )
   }
 
@@ -87,9 +95,12 @@ function App() {
           <p className="team-badge">
             Trip team: <strong>{team.name}</strong>
           </p>
-          <button type="button" className="btn secondary btn-sm" onClick={() => logout()}>
-            Log out
-          </button>
+          <div className="header-actions">
+            <ThemeToggle theme={theme} onToggle={toggleTheme} />
+            <button type="button" className="btn secondary btn-sm" onClick={() => logout()}>
+              Log out
+            </button>
+          </div>
         </div>
       </header>
 
