@@ -3,10 +3,12 @@ import {
   DATE_INPUT_MAX,
   DATE_INPUT_MIN,
   TRIP_NAME_MAX,
+  TRIP_NIGHTS_MAX,
   addDaysIso,
   defaultTripDates,
   formatDateLabel,
-  inclusiveDays,
+  formatNightsLabel,
+  nightsBetween,
   tripDisplayName,
   tripScheduleLabel,
   validateTripPlan,
@@ -73,11 +75,11 @@ export function TripSheet({
   }, [onClose])
 
   const selected = tripTypes.find((t) => t.id === selectedTypeId)
-  const duration = useMemo(() => {
+  const nights = useMemo(() => {
     try {
-      return inclusiveDays(form.startDate, form.endDate)
+      return nightsBetween(form.startDate, form.endDate)
     } catch {
-      return 1
+      return 0
     }
   }, [form.startDate, form.endDate])
 
@@ -90,10 +92,11 @@ export function TripSheet({
     })
   }
 
-  function setDays(daysRaw: string) {
-    const days = Number(daysRaw)
-    if (!Number.isFinite(days) || days < 1) return
-    const endDate = addDaysIso(form.startDate, Math.min(366, Math.floor(days)) - 1)
+  function setNights(nightsRaw: string) {
+    const value = Number(nightsRaw)
+    if (!Number.isFinite(value) || value < 0) return
+    const nights = Math.min(TRIP_NIGHTS_MAX, Math.floor(value))
+    const endDate = addDaysIso(form.startDate, nights)
     if (endDate) patch('endDate', endDate)
   }
 
@@ -219,22 +222,22 @@ export function TripSheet({
             </div>
 
             <label className="field">
-              <span>Length (days)</span>
+              <span>Length (nights)</span>
               <input
                 type="number"
-                name="tripDays"
+                name="tripNights"
                 inputMode="numeric"
-                min={1}
-                max={366}
-                value={duration}
-                onChange={(e) => setDays(e.target.value)}
-                aria-label="Number of days"
+                min={0}
+                max={TRIP_NIGHTS_MAX}
+                value={nights}
+                onChange={(e) => setNights(e.target.value)}
+                aria-label="Number of nights"
               />
             </label>
 
             <p className="trip-duration-preview" aria-live="polite">
               {form.startDate && form.endDate
-                ? durationPreview(form.startDate, form.endDate, duration)
+                ? durationPreview(form.startDate, form.endDate, nights)
                 : 'Pick dates to see the trip length.'}
             </p>
 
@@ -287,9 +290,9 @@ export function TripSheet({
   )
 }
 
-function durationPreview(start: string, end: string, days: number) {
+function durationPreview(start: string, end: string, nights: number) {
   const a = formatDateLabel(start)
   const b = formatDateLabel(end)
   const range = a === b ? a : `${a} – ${b}`
-  return `${range} · ${days} ${days === 1 ? 'day' : 'days'}`
+  return `${range} · ${formatNightsLabel(nights)}`
 }

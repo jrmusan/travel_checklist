@@ -49,13 +49,20 @@ export function addDaysIso(iso: string, days: number): string | null {
   return toIsoDate(date)
 }
 
-/** Inclusive calendar days (same start and end → 1). */
-export function inclusiveDays(startIso: string, endIso: string): number {
+export const TRIP_NIGHTS_MAX = 366
+
+/** Calendar nights (same start and end → 0). Oct 24–Oct 31 → 7. */
+export function nightsBetween(startIso: string, endIso: string): number {
   const start = parseDateOnly(startIso)
   const end = parseDateOnly(endIso)
-  if (!start || !end) return 1
+  if (!start || !end) return 0
   const ms = end.getTime() - start.getTime()
-  return Math.max(1, Math.round(ms / 86_400_000) + 1)
+  return Math.max(0, Math.round(ms / 86_400_000))
+}
+
+export function formatNightsLabel(nights: number): string {
+  if (nights <= 0) return 'day trip'
+  return nights === 1 ? '1 night' : `${nights} nights`
 }
 
 export function defaultTripDates(now = new Date()): { startDate: string; endDate: string } {
@@ -103,16 +110,15 @@ export function tripDateRange(trip: TripInstance): string {
   return start === end ? start : `${start} – ${end}`
 }
 
-export function tripDayCount(trip: TripInstance): number {
-  if (trip.startDate && trip.endDate) return inclusiveDays(trip.startDate, trip.endDate)
-  const end = trip.endedAt ? new Date(trip.endedAt) : new Date()
-  const ms = end.getTime() - new Date(trip.startedAt).getTime()
-  return Math.max(1, Math.ceil(ms / 86_400_000))
+export function tripNightCount(trip: TripInstance): number {
+  if (trip.startDate && trip.endDate) return nightsBetween(trip.startDate, trip.endDate)
+  const start = toIsoDate(new Date(trip.startedAt))
+  const end = toIsoDate(trip.endedAt ? new Date(trip.endedAt) : new Date())
+  return nightsBetween(start, end)
 }
 
 export function tripScheduleLabel(trip: TripInstance): string {
-  const days = tripDayCount(trip)
-  return `${tripDateRange(trip)} · ${days} ${days === 1 ? 'day' : 'days'}`
+  return `${tripDateRange(trip)} · ${formatNightsLabel(tripNightCount(trip))}`
 }
 
 export function tripProgress(state: PersistedState, trip: TripInstance, items: MasterItem[]) {
