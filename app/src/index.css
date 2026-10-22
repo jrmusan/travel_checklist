@@ -5,84 +5,132 @@
 }
 
 :root {
-  /* Cozy outdoors palette */
-  --color-bg-top: #dce8e0;
-  --color-bg: #faf6ef;
-  --color-bg-bottom: #f3e8d9;
-  --color-surface: #fffef9;
-  --color-surface-muted: #f2ebe2;
-  --color-surface-elevated: #ffffff;
-  --color-border: #d8d0c4;
-  --color-border-soft: #e8e2d8;
-  --color-text: #1a2e24;
-  --color-text-muted: #4d6358;
-  --color-text-subtle: #6b7d72;
-  --color-text-faint: #8a968f;
+  /* Bark, forest, moss — national-park trail palette */
+  --color-bark: #4a3728;
+  --color-bark-deep: #3d2e22;
+  --color-pine: #1e3d2f;
+  --color-pine-deep: #152a21;
+  --color-forest: #2a4d3a;
+  --color-moss: #5d7a52;
+  --color-sage: #9aab96;
+  --color-sage-mist: #c8d4c3;
+  --color-slate: #4a5d6a;
+  --color-slate-soft: #6b7f8f;
+  --color-lantern: #c9a227;
+  --color-lantern-glow: #e8b84a;
+  --color-parchment: #f4f0e6;
+  --color-canvas: #ebe4d4;
+  --color-ink: #1f2a24;
+  --color-ink-muted: #3d4f45;
+  --color-ink-subtle: #5a6b60;
+  --color-ink-faint: #7a8a80;
 
-  --color-primary: #2f6b4f;
-  --color-primary-hover: #245a41;
-  --color-primary-soft: #e3f0e8;
-  --color-primary-muted: #5a9e72;
+  --color-bg-top: #b8c9b8;
+  --color-bg: var(--color-parchment);
+  --color-bg-bottom: var(--color-canvas);
+  --color-surface: #faf7ef;
+  --color-surface-muted: #ede8dc;
+  --color-surface-elevated: #fffdf8;
+  --color-border: #c4b5a0;
+  --color-border-wood: var(--color-bark);
+  --color-border-soft: #ddd4c4;
+  --color-text: var(--color-ink);
+  --color-text-muted: var(--color-ink-muted);
+  --color-text-subtle: var(--color-ink-subtle);
+  --color-text-faint: var(--color-ink-faint);
 
-  --color-accent: #c9772e;
-  --color-accent-hover: #a86224;
-  --color-accent-soft: #fdebd0;
-  --color-accent-glow: rgba(232, 165, 75, 0.35);
+  --color-primary: var(--color-pine);
+  --color-primary-hover: var(--color-pine-deep);
+  --color-primary-soft: #dce8df;
+  --color-primary-muted: var(--color-moss);
 
-  --color-progress-track: #e2ddd4;
-  --color-progress-fill-start: var(--color-primary);
-  --color-progress-fill-end: var(--color-primary-muted);
+  --color-accent: var(--color-lantern);
+  --color-accent-hover: #a8861f;
+  --color-accent-soft: #f5ecd0;
+  --color-accent-glow: rgba(201, 162, 39, 0.4);
 
-  --color-filter-active: var(--color-text);
-  --color-chip-active-border: var(--color-primary);
-  --color-chip-active-bg: var(--color-primary-soft);
+  --color-progress-track: #d4cfc4;
+  --color-progress-fill-start: var(--color-bark);
+  --color-progress-fill-mid: var(--color-forest);
+  --color-progress-fill-end: var(--color-moss);
 
-  --shadow-soft: 0 2px 10px rgba(26, 46, 36, 0.06);
-  --shadow-card: 0 4px 22px rgba(26, 46, 36, 0.07);
-  --shadow-button: 0 2px 6px rgba(47, 107, 79, 0.2);
+  --color-filter-active: var(--color-pine-deep);
+  --color-chip-active-border: var(--color-bark);
+  --color-chip-active-bg: #e8e0d0;
 
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 18px;
+  --shadow-soft: 0 2px 8px rgba(30, 61, 47, 0.08);
+  --shadow-card: 0 6px 24px rgba(74, 55, 40, 0.1);
+  --shadow-button: 0 3px 0 var(--color-bark-deep), 0 4px 12px rgba(30, 61, 47, 0.2);
+  --shadow-chip: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 4px rgba(74, 55, 40, 0.12);
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --radius-pill: 999px;
 
-  --font-body: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Fraunces', 'Georgia', 'Times New Roman', serif;
+  --font-body: 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --wood-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='40' viewBox='0 0 200 40'%3E%3Cpath fill='none' stroke='%234a3728' stroke-opacity='0.12' stroke-width='0.8' d='M0 8 Q50 4 100 10 T200 8 M0 20 Q60 24 120 18 T200 22 M0 32 Q40 28 80 34 T200 30'/%3E%3C/svg%3E");
 
   color-scheme: light;
 }
 
-/* Trip-type accent overrides (shell stays generic) */
 [data-trip-type='camper'] {
-  --color-accent: #d4842a;
-  --color-accent-soft: #fff0dc;
-  --color-progress-fill-end: #6dad7a;
+  --color-accent: #d4a017;
+  --color-accent-soft: #faf0d4;
+  --color-progress-fill-end: #6b8f5e;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
   color: var(--color-text);
-  background: linear-gradient(
-    165deg,
-    var(--color-bg-top) 0%,
-    var(--color-bg) 42%,
-    var(--color-bg-bottom) 100%
-  );
+  background:
+    linear-gradient(
+      180deg,
+      rgba(30, 61, 47, 0.06) 0%,
+      transparent 28%
+    ),
+    linear-gradient(
+      168deg,
+      var(--color-bg-top) 0%,
+      var(--color-bg) 38%,
+      var(--color-bg-bottom) 100%
+    );
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Subtle pine-line motif — decorative only */
+/* Topo contour lines — soft trail-map atmosphere */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.045;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cpath fill='%232f6b4f' d='M60 8 L72 36 H84 L66 52 L72 80 L60 64 L48 80 L54 52 L36 36 H48 Z'/%3E%3C/svg%3E");
-  background-size: 88px 88px;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Cg fill='none' stroke='%231e3d2f' stroke-opacity='0.08' stroke-width='1.2'%3E%3Cellipse cx='200' cy='220' rx='180' ry='120'/%3E%3Cellipse cx='200' cy='220' rx='140' ry='95'/%3E%3Cellipse cx='200' cy='220' rx='100' ry='70'/%3E%3Cellipse cx='200' cy='220' rx='60' ry='42'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 420px 420px;
+  background-position: center top;
+}
+
+/* Distant forest silhouette at bottom */
+body::after {
+  content: '';
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 120px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.12;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath fill='%231e3d2f' d='M0 120 L0 80 L40 50 L60 75 L90 40 L120 70 L150 35 L180 65 L220 30 L260 60 L300 25 L340 55 L380 20 L420 50 L460 15 L500 45 L540 10 L580 40 L620 5 L660 35 L700 0 L740 30 L780 5 L820 35 L860 10 L900 40 L940 15 L980 45 L1020 20 L1060 50 L1100 25 L1140 55 L1200 30 L1200 120 Z'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
 }
 
 #root {
@@ -92,6 +140,6 @@ body::before {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-lantern);
   outline-offset: 2px;
 }

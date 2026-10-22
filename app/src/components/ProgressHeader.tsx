@@ -15,7 +15,7 @@ export function ProgressHeader({ packed, total }: ProgressHeaderProps) {
       <div className="progress-track" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
         <div className="progress-fill" style={{ width: `${pct}%` }} />
       </div>
-      <p className="progress-pct">{pct}% ready</p>
+      <p className="progress-pct">{pct}% packed</p>
     </div>
   )
 }

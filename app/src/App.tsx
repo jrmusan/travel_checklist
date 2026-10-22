@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { HeaderArt } from './components/HeaderArt'
 import { PackView } from './components/PackView'
 import { TripControls } from './components/TripControls'
 import { TripTypePicker } from './components/TripTypePicker'
@@ -43,11 +44,17 @@ function App() {
   return (
     <div className="app-shell" data-trip-type={selectedTypeId}>
       <header className="app-header">
-        <div>
-          <h1>
-            <span className="title-accent">Travel</span> checklist
-          </h1>
-          <p className="subtitle">{selectedType.description}</p>
+        <div className="header-brand">
+          <HeaderArt />
+          <div className="header-text">
+            <h1>
+              <span className="title-trail" aria-hidden>
+                ◆
+              </span>
+              <span className="title-accent">Trail</span> checklist
+            </h1>
+            <p className="subtitle">{selectedType.description}</p>
+          </div>
         </div>
       </header>
 
