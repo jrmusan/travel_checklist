@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Joey's Travel Checklists</title>
+    <style>
+      :root {
+        font-family: system-ui, sans-serif;
+        line-height: 1.5;
+        color: #1a1a1a;
+        background: #f6f4ef;
+      }
+      main {
+        max-width: 42rem;
+        margin: 2rem auto;
+        padding: 0 1.25rem 3rem;
+      }
+      h1 {
+        font-size: 1.75rem;
+        margin-bottom: 0.25rem;
+      }
+      p.lead {
+        color: #444;
+        margin-top: 0;
+      }
+      ul {
+        padding-left: 1.25rem;
+      }
+      a {
+        color: #0b5;
+      }
+      code {
+        font-size: 0.9em;
+        background: #e8e4dc;
+        padding: 0.1em 0.35em;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Joey's Travel Checklists</h1>
+      <p class="lead">
+        Trip-type packing lists with a shared master item pool and a clean slate for each trip.
+        <strong>Camper</strong> is the first trip type; more types will plug in the same way.
+      </p>
+      <h2>Checklists</h2>
+      <ul>
+        <li>
+          <a href="https://github.com/jrmusan/travel_checklist/blob/main/checklists/camping-essentials.md"
+            >Camping essentials</a
+          >
+          (markdown on GitHub)
+        </li>
+        <li>
+          <a
+            href="https://cursor.com/canvas/store-4d363013-7ab0-46aa-a7c0-b31b5059e469/695d0bf4-d34e-43cb-866e-2d4b31de46be"
+            >Interactive camping canvas</a
+          >
+          (Cursor Canvas)
+        </li>
+      </ul>
+      <h2>Developers</h2>
+      <p>
+        Setup, local run, and Vercel deploy steps are in
+        <a href="https://github.com/jrmusan/travel_checklist/blob/main/README.md">README.md</a>.
+      </p>
+      <p>
+        When the trip-type web app lands on <code>main</code>, this site will serve the built app from
+        <code>app/</code>; until then this page is a static placeholder.
+      </p>
+    </main>
+  </body>
+</html>
