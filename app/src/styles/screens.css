@@ -294,7 +294,16 @@
 
 .category-panel-inner {
   overflow: hidden;
+}
+
+/* min-height: 0 lets 0fr actually collapse; min-content is required when open
+   so 1fr does not resolve to 0 and hide every checked row after auto-collapse. */
+.category-panel:not(.is-open) .category-panel-inner {
   min-height: 0;
+}
+
+.category-panel.is-open .category-panel-inner {
+  min-height: min-content;
 }
 
 .category-heading {

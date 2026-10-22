@@ -101,11 +101,16 @@ export function ChecklistScreen({
         const all = itemsByCategory.get(cat.id) ?? []
         const visible = all.filter((item) => {
           if (normalizedQuery && !item.label.toLowerCase().includes(normalizedQuery)) return false
+          // Only "Still to pack" may hide checked items. All + category chips keep them.
           if (packFilter === 'remaining' && checkedIds.has(item.id)) return false
           return true
         })
+        const listed = packFilter === 'remaining' ? visible : all.filter((item) => {
+          if (normalizedQuery && !item.label.toLowerCase().includes(normalizedQuery)) return false
+          return true
+        })
         const packedCount = all.filter((i) => checkedIds.has(i.id)).length
-        return { cat, all, visible, total: all.length, packedCount, ...categoryArt(cat) }
+        return { cat, all, visible, listed, total: all.length, packedCount, ...categoryArt(cat) }
       })
       .filter((s) => {
         if (normalizedQuery || packFilter === 'remaining') return s.visible.length > 0
@@ -218,7 +223,7 @@ export function ChecklistScreen({
             </p>
           </div>
         ) : (
-          sections.map(({ cat, all, visible, total: catTotal, packedCount, art }) => {
+          sections.map(({ cat, all, listed, total: catTotal, packedCount, art }) => {
             const expanded = isExpanded(cat.id)
             const editing = editingCategoryId === cat.id
             const headerId = `category-header-${cat.id}`
@@ -246,7 +251,10 @@ export function ChecklistScreen({
                     packed={packedCount}
                     total={catTotal}
                     disabled={disabled}
-                    onChange={(checked) => onSetChecked(all.map((i) => i.id), checked)}
+                    onChange={(checked) => {
+                      onSetChecked(all.map((i) => i.id), checked)
+                      if (checked) onPackFilter('all')
+                    }}
                   />
                   <button
                     type="button"
@@ -294,8 +302,9 @@ export function ChecklistScreen({
                       aria-labelledby={headerId}
                       aria-hidden={!expanded}
                       className="item-list"
+                      data-listed-count={listed.length}
                     >
-                      {visible.map((item) => {
+                      {listed.map((item) => {
                         const checked = checkedIds.has(item.id)
                         return (
                           <li key={item.id} data-item-id={item.id}>
@@ -306,7 +315,11 @@ export function ChecklistScreen({
                                   className="visually-hidden"
                                   checked={checked}
                                   disabled={disabled}
-                                  onChange={() => onToggle(item.id)}
+                                  onChange={() => {
+                                    const willCheck = !checked
+                                    onToggle(item.id)
+                                    if (willCheck && packedCount + 1 === catTotal) onPackFilter('all')
+                                  }}
                                   tabIndex={expanded ? 0 : -1}
                                 />
                                 <span className="check-circle" aria-hidden>
