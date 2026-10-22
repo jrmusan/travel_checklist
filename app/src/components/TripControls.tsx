@@ -22,9 +22,12 @@ export function TripControls({
     })
     return (
       <div className="trip-controls">
-        <p className="trip-meta">
-          Active {tripType.name.toLowerCase()} · started {started}
-        </p>
+        <div className="trip-controls-header">
+          <span className="trip-status-chip active">Trip active</span>
+          <p className="trip-meta">
+            {tripType.name} · started {started}
+          </p>
+        </div>
         <div className="trip-actions">
           <button type="button" className="btn secondary" onClick={onEnd}>
             End trip
@@ -39,7 +42,10 @@ export function TripControls({
 
   return (
     <div className="trip-controls">
-      <p className="trip-meta">No active trip — start with everything unchecked.</p>
+      <div className="trip-controls-header">
+        <span className="trip-status-chip idle">Ready to pack</span>
+        <p className="trip-meta">No active trip — start with everything unchecked.</p>
+      </div>
       <button type="button" className="btn primary" onClick={onStart}>
         Start {tripType.name.toLowerCase()}
       </button>

@@ -41,10 +41,12 @@ function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-trip-type={selectedTypeId}>
       <header className="app-header">
         <div>
-          <h1>Travel checklist</h1>
+          <h1>
+            <span className="title-accent">Travel</span> checklist
+          </h1>
           <p className="subtitle">{selectedType.description}</p>
         </div>
       </header>
