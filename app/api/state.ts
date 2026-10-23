@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import {
+  ConcurrentStateError,
   emptyServerTripState,
   getTeamTripStateRow,
   saveMergedTeamTripState,
@@ -38,6 +39,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       )
       return res.status(200).json({ ok: true, state: row.state, updatedAt: row.updatedAt })
     } catch (err) {
+      if (err instanceof ConcurrentStateError) {
+        return res.status(409).json({ error: err.message, retry: true })
+      }
       console.error('state PUT error', err)
       return res.status(500).json({ error: 'Could not save team state.' })
     }

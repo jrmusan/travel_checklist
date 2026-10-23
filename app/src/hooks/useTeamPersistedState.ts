@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchTeamState, saveTeamState } from '../api/client'
+import { fetchTeamState, isConcurrentStateError, saveTeamState } from '../api/client'
 import type { TeamInfo } from '../api/client'
 import {
   applyRemoteToLocal,
@@ -7,12 +7,14 @@ import {
   mergeLegacyLocalIfNeeded,
   mergeServerIntoPersisted,
   serverStateIsEmpty,
+  slicesEqual,
 } from '../store/server-sync'
 import { createInitialState } from '../store/persistence'
 import type { PersistedState } from '../types'
 
 const SAVE_DEBOUNCE_MS = 400
 const POLL_MS = 18_000
+const CLIENT_SAVE_RETRIES = 5
 
 export type PersistOptions = { flush?: boolean }
 
@@ -34,14 +36,12 @@ export function useTeamPersistedState(team: TeamInfo | null): [
   const stateRef = useRef(state)
   const teamRef = useRef(team)
   const hydratedRef = useRef(hydrated)
-  const savingRef = useRef(false)
-  const queuedRef = useRef(false)
-  const queuedKeepaliveRef = useRef(false)
   const ackedRef = useRef<{ state: PersistedState; updatedAt: string | null }>({
     state: createInitialState(),
     updatedAt: null,
   })
-  const persistRef = useRef<(opts?: { keepalive?: boolean }) => void>(() => {})
+  const chainRef = useRef(Promise.resolve())
+  const persistRef = useRef<(opts?: { keepalive?: boolean }) => Promise<void>>(async () => {})
   const refreshRef = useRef<(opts?: { silent?: boolean }) => Promise<void>>(async () => {})
 
   useEffect(() => {
@@ -50,83 +50,100 @@ export function useTeamPersistedState(team: TeamInfo | null): [
     hydratedRef.current = hydrated
   })
 
-  const persist = useCallback((opts?: { keepalive?: boolean }) => {
-    const run = (nextOpts?: { keepalive?: boolean }) => {
-      if (!teamRef.current || !hydratedRef.current) return
+  const enqueue = useCallback((task: () => Promise<void>) => {
+    const run = chainRef.current.then(task, task)
+    chainRef.current = run.then(
+      () => undefined,
+      () => undefined,
+    )
+    return run
+  }, [])
+
+  const isDirty = useCallback(() => !slicesEqual(stateRef.current, ackedRef.current.state), [])
+
+  const applyAcked = useCallback((remote: import('../api/client').ServerTripStatePayload, updatedAt: string | null) => {
+    const sentBase = ackedRef.current.state
+    const next = applyRemoteToLocal(sentBase, stateRef.current, remote)
+    ackedRef.current = {
+      state: mergeServerIntoPersisted(remote),
+      updatedAt,
+    }
+    if (!slicesEqual(stateRef.current, next)) {
+      stateRef.current = next
+      setState(next)
+    }
+  }, [])
+
+  const persist = useCallback(
+    (opts?: { keepalive?: boolean }) => {
+      if (!teamRef.current || !hydratedRef.current) return Promise.resolve()
       if (saveTimer.current) {
         clearTimeout(saveTimer.current)
         saveTimer.current = null
       }
-      if (savingRef.current) {
-        queuedRef.current = true
-        queuedKeepaliveRef.current = queuedKeepaliveRef.current || Boolean(nextOpts?.keepalive)
-        return
-      }
-      savingRef.current = true
-      const keepalive = Boolean(nextOpts?.keepalive)
-      const sent = extractServerSlice(stateRef.current)
-      const base = extractServerSlice(ackedRef.current.state)
-      void saveTeamState(sent, { keepalive, base })
-        .then((result) => {
-          if (!result?.state) return
-          const remote = result.state
-          ackedRef.current = {
-            state: mergeServerIntoPersisted(remote),
-            updatedAt: result.updatedAt,
-          }
-          const next = applyRemoteToLocal(mergeServerIntoPersisted(sent), stateRef.current, remote)
-          if (JSON.stringify(extractServerSlice(stateRef.current)) === JSON.stringify(extractServerSlice(next))) {
+      if (!isDirty()) return Promise.resolve()
+
+      return enqueue(async () => {
+        if (!isDirty()) return
+        const keepalive = Boolean(opts?.keepalive)
+        for (let attempt = 0; attempt < CLIENT_SAVE_RETRIES; attempt++) {
+          if (!isDirty()) return
+          const sent = extractServerSlice(stateRef.current)
+          const base = extractServerSlice(ackedRef.current.state)
+          try {
+            const result = await saveTeamState(sent, { keepalive, base })
+            if (!result?.state) return
+            applyAcked(result.state, result.updatedAt)
+            return
+          } catch (err) {
+            if (keepalive) return
+            if (isConcurrentStateError(err) && attempt < CLIENT_SAVE_RETRIES - 1) {
+              try {
+                const envelope = await fetchTeamState()
+                applyAcked(envelope.state, envelope.updatedAt)
+              } catch {
+                /* retry PUT with current local */
+              }
+              continue
+            }
+            setSyncError(err instanceof Error ? err.message : 'Could not save changes')
             return
           }
-          stateRef.current = next
-          setState(next)
-        })
-        .catch((err) => {
-          if (keepalive) return
-          setSyncError(err instanceof Error ? err.message : 'Could not save changes')
-        })
-        .finally(() => {
-          savingRef.current = false
-          if (queuedRef.current) {
-            queuedRef.current = false
-            const nextKeepalive = queuedKeepaliveRef.current
-            queuedKeepaliveRef.current = false
-            run({ keepalive: nextKeepalive })
+        }
+      })
+    },
+    [applyAcked, enqueue, isDirty],
+  )
+
+  const refresh = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!teamRef.current || !hydratedRef.current) return
+      if (!opts?.silent) setRefreshing(true)
+      try {
+        await enqueue(async () => {
+          const envelope = await fetchTeamState()
+          if (opts?.silent && envelope.updatedAt && envelope.updatedAt === ackedRef.current.updatedAt) {
+            return
           }
+          applyAcked(envelope.state, envelope.updatedAt)
+          setSyncError(null)
         })
-    }
-    run(opts)
-  }, [])
-
-  persistRef.current = persist
-
-  const refresh = useCallback(async (opts?: { silent?: boolean }) => {
-    if (!teamRef.current || !hydratedRef.current) return
-    if (savingRef.current) return
-    if (!opts?.silent) setRefreshing(true)
-    try {
-      const envelope = await fetchTeamState()
-      if (opts?.silent && envelope.updatedAt && envelope.updatedAt === ackedRef.current.updatedAt) {
-        return
+        if (isDirty()) await persist()
+      } catch (err) {
+        if (!opts?.silent) {
+          setSyncError(err instanceof Error ? err.message : 'Could not refresh team list')
+        }
+      } finally {
+        if (!opts?.silent) setRefreshing(false)
       }
-      const next = applyRemoteToLocal(ackedRef.current.state, stateRef.current, envelope.state)
-      ackedRef.current = {
-        state: mergeServerIntoPersisted(envelope.state),
-        updatedAt: envelope.updatedAt,
-      }
-      stateRef.current = next
-      setState(next)
-      setSyncError(null)
-    } catch (err) {
-      if (!opts?.silent) {
-        setSyncError(err instanceof Error ? err.message : 'Could not refresh team list')
-      }
-    } finally {
-      if (!opts?.silent) setRefreshing(false)
-    }
-  }, [])
+    },
+    [applyAcked, enqueue, isDirty, persist],
+  )
 
-  refreshRef.current = refresh
+  useEffect(() => {
+    persistRef.current = persist
+    refreshRef.current = refresh
+  }, [persist, refresh])
 
   useEffect(() => {
     if (!team) {
@@ -169,24 +186,31 @@ export function useTeamPersistedState(team: TeamInfo | null): [
 
   useEffect(() => {
     if (!team || !hydrated) return
+    if (!isDirty()) return
 
     if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => persistRef.current(), SAVE_DEBOUNCE_MS)
+    saveTimer.current = setTimeout(() => {
+      void persistRef.current()
+    }, SAVE_DEBOUNCE_MS)
 
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
     }
-  }, [state, team, hydrated])
+  }, [state, team, hydrated, isDirty])
 
   useEffect(() => {
     if (!team || !hydrated) return
 
-    const flushHidden = () => persistRef.current({ keepalive: true })
+    const flushHidden = () => {
+      void persistRef.current({ keepalive: true })
+    }
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') flushHidden()
       else void refreshRef.current({ silent: true })
     }
-    const onPageShow = () => void refreshRef.current({ silent: true })
+    const onPageShow = () => {
+      void refreshRef.current({ silent: true })
+    }
     window.addEventListener('pagehide', flushHidden)
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('pageshow', onPageShow)
@@ -194,7 +218,7 @@ export function useTeamPersistedState(team: TeamInfo | null): [
       window.removeEventListener('pagehide', flushHidden)
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('pageshow', onPageShow)
-      persistRef.current({ keepalive: true })
+      void persistRef.current({ keepalive: true })
     }
   }, [team?.id, hydrated])
 
@@ -233,12 +257,16 @@ export function useTeamPersistedState(team: TeamInfo | null): [
         stateRef.current = next
         return next
       })
-      if (options?.flush) persistRef.current()
+      if (options?.flush) void persistRef.current()
     },
     [],
   )
 
+  const flush = useCallback(() => {
+    void persistRef.current()
+  }, [])
+
   const refreshNow = useCallback(() => refreshRef.current(), [])
 
-  return [state, update, hydrated, syncError, persist, refreshNow, refreshing]
+  return [state, update, hydrated, syncError, flush, refreshNow, refreshing]
 }

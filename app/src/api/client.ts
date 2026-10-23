@@ -18,8 +18,26 @@ export interface TeamStateEnvelope {
   updatedAt: string | null
 }
 
+export class ConcurrentStateError extends Error {
+  readonly status = 409
+  readonly retry = true
+  constructor(message = 'Could not save team state (concurrent writes).') {
+    super(message)
+    this.name = 'ConcurrentStateError'
+  }
+}
+
+export function isConcurrentStateError(err: unknown): boolean {
+  if (err instanceof ConcurrentStateError) return true
+  if (!(err instanceof Error)) return false
+  return err.name === 'ConcurrentStateError' || /concurrent writes/i.test(err.message)
+}
+
 async function parseJson<T>(res: Response): Promise<T> {
-  const data = (await res.json()) as T & { error?: string }
+  const data = (await res.json()) as T & { error?: string; retry?: boolean }
+  if (res.status === 409 || data.retry) {
+    throw new ConcurrentStateError(data.error)
+  }
   if (!res.ok) {
     throw new Error(data.error ?? `Request failed (${res.status})`)
   }

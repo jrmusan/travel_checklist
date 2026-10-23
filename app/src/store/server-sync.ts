@@ -28,6 +28,10 @@ export function extractServerSlice(state: PersistedState): ServerTripStatePayloa
   }
 }
 
+export function slicesEqual(a: PersistedState, b: PersistedState): boolean {
+  return JSON.stringify(extractServerSlice(a)) === JSON.stringify(extractServerSlice(b))
+}
+
 /** Keep in-flight local edits while applying a remote GET/PUT result. */
 export function applyRemoteToLocal(
   acked: PersistedState,

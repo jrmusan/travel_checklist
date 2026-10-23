@@ -59,6 +59,16 @@ export interface ServerTripState {
   progressByTripId: Record<string, { checkedItemIds: string[] }>
   catalog?: ServerCatalog
   removedItemIds?: string[]
+  /** Monotonic write counter for CAS. Not a client-edited field. */
+  revision?: number
+}
+
+export class ConcurrentStateError extends Error {
+  readonly status = 409
+  constructor() {
+    super('Could not save team state (concurrent writes).')
+    this.name = 'ConcurrentStateError'
+  }
 }
 
 export interface TeamTripStateRow {
@@ -95,6 +105,16 @@ export async function saveTeamTripState(teamId: string, state: ServerTripState):
   await saveMergedTeamTripState(teamId, state, emptyTeamSlice())
 }
 
+function revisionOf(state: ServerTripState | undefined): number {
+  const value = state?.revision
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+function payloadWithoutRevision(state: ServerTripState): string {
+  const { revision: _revision, ...rest } = state
+  return JSON.stringify(rest)
+}
+
 export async function saveMergedTeamTripState(
   teamId: string,
   incoming: ServerTripState,
@@ -103,13 +123,20 @@ export async function saveMergedTeamTripState(
   const incomingNorm = normalizeServerTripState(incoming)
   const baseNorm = base ? normalizeServerTripState(base) : emptyServerTripState()
 
-  for (let attempt = 0; attempt < 6; attempt++) {
+  for (let attempt = 0; attempt < 10; attempt++) {
     const current = await getTeamTripStateRow(teamId)
     const stored = current.updatedAt ? current.state : emptyServerTripState()
+    const expectedRev = revisionOf(current.state)
     const merged = normalizeServerTripState(
       mergeTeamState(baseNorm, incomingNorm, stored) as ServerTripState,
     )
-    const payload = JSON.stringify(merged)
+
+    if (current.updatedAt && payloadWithoutRevision(merged) === payloadWithoutRevision(stored)) {
+      return current
+    }
+
+    const toWrite: ServerTripState = { ...merged, revision: expectedRev + 1 }
+    const payload = JSON.stringify(toWrite)
 
     if (!current.updatedAt) {
       const inserted = await sql<{ updated_at: Date | string }>`
@@ -119,7 +146,7 @@ export async function saveMergedTeamTripState(
         RETURNING updated_at
       `
       if (inserted.rows[0]) {
-        return { state: merged, updatedAt: toIso(inserted.rows[0].updated_at) }
+        return { state: toWrite, updatedAt: toIso(inserted.rows[0].updated_at) }
       }
       continue
     }
@@ -128,15 +155,15 @@ export async function saveMergedTeamTripState(
       UPDATE team_trip_state
       SET state = ${payload}::jsonb, updated_at = NOW()
       WHERE team_id = ${teamId}::uuid
-        AND updated_at IS NOT DISTINCT FROM ${current.updatedAt}::timestamptz
+        AND COALESCE((state->>'revision')::int, 0) = ${expectedRev}
       RETURNING updated_at
     `
     if (updated.rows[0]) {
-      return { state: merged, updatedAt: toIso(updated.rows[0].updated_at) }
+      return { state: toWrite, updatedAt: toIso(updated.rows[0].updated_at) }
     }
   }
 
-  throw new Error('Could not save team state (concurrent writes).')
+  throw new ConcurrentStateError()
 }
 
 function normalizeCatalog(raw: ServerTripState['catalog']): ServerCatalog | undefined {
@@ -152,6 +179,7 @@ function normalizeServerTripState(state: ServerTripState): ServerTripState {
   const removedItemIds = Array.isArray(state.removedItemIds)
     ? state.removedItemIds.filter((id) => typeof id === 'string')
     : []
+  const revision = revisionOf(state)
   return {
     schemaVersion: 2,
     trips: Array.isArray(state.trips) ? state.trips : [],
@@ -162,5 +190,6 @@ function normalizeServerTripState(state: ServerTripState): ServerTripState {
         : {},
     ...(catalog ? { catalog } : {}),
     removedItemIds,
+    ...(revision ? { revision } : {}),
   }
 }
