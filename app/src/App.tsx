@@ -62,7 +62,7 @@ function App() {
   const { team, loading: authLoading, error: authError, setError, login, register, logout } =
     useAuth()
   const tripTypes = listTripTypes()
-  const [selectedTypeId, setSelectedTypeId] = useState<TripTypeId>(tripTypes[0]?.id ?? 'camper')
+  const [selectedTypeId, setSelectedTypeId] = useState<TripTypeId | null>(null)
   const [state, update, hydrated, syncError, flushSave, refresh, refreshing] =
     useTeamPersistedState(team)
   const [syncToast, setSyncToast] = useState<string | null>(null)
@@ -75,24 +75,22 @@ function App() {
   const [sheetMode, setSheetMode] = useState<'manage' | 'create' | 'edit' | 'next' | undefined>()
   const [showComplete, setShowComplete] = useState(false)
 
-  const selectedType = tripTypes.find((t) => t.id === selectedTypeId) ?? tripTypes[0]
-
   const activeTrip = useMemo(() => {
     if (!state.activeTripId) return null
     const trip = state.trips.find((t) => t.id === state.activeTripId)
     return trip?.status === 'active' ? trip : null
   }, [state.activeTripId, state.trips])
 
-  const activeForSelected =
-    activeTrip && activeTrip.tripTypeId === selectedTypeId ? activeTrip : null
+  const viewingTypeId = activeTrip?.tripTypeId ?? selectedTypeId
+  const selectedType = tripTypes.find((t) => t.id === viewingTypeId) ?? tripTypes[0]
 
-  const { categories, items } = itemsForTripType(state, selectedTypeId)
+  const { categories, items } = itemsForTripType(state, selectedType.id)
 
   const checkedIds = useMemo(() => {
-    if (!activeForSelected) return new Set<string>()
-    const progress = state.progressByTripId[activeForSelected.id]
+    if (!activeTrip) return new Set<string>()
+    const progress = state.progressByTripId[activeTrip.id]
     return new Set(progress?.checkedItemIds ?? [])
-  }, [activeForSelected, state.progressByTripId])
+  }, [activeTrip, state.progressByTripId])
 
   const packed = items.filter((i) => checkedIds.has(i.id)).length
 
@@ -123,7 +121,7 @@ function App() {
     )
   }
 
-  if (!hydrated || !selectedType) {
+  if (!hydrated) {
     return <Splash message="Loading team packing list…" />
   }
 
@@ -139,59 +137,61 @@ function App() {
     setSheetOpen(true)
   }
 
-  const handleStart = (plan: TripPlan) => {
-    update((s) => startTrip(s, selectedTypeId, plan))
+  const handleStart = (plan: TripPlan, tripTypeId: TripTypeId) => {
+    setSelectedTypeId(tripTypeId)
+    update((s) => startTrip(s, tripTypeId, plan))
     setSheetOpen(false)
     openChecklist()
   }
 
   const handleUpdateTrip = (plan: TripPlan) => {
-    if (!activeForSelected) return
-    update((s) => updateTrip(s, activeForSelected.id, plan))
+    if (!activeTrip) return
+    update((s) => updateTrip(s, activeTrip.id, plan))
     setSheetOpen(false)
   }
 
-  const handleStartNext = (plan: TripPlan) => {
+  const handleStartNext = (plan: TripPlan, tripTypeId: TripTypeId) => {
+    setSelectedTypeId(tripTypeId)
     update((s) => {
-      const ended = activeForSelected ? endTrip(s, activeForSelected.id) : s
-      return startTrip(ended, selectedTypeId, plan)
+      const ended = activeTrip ? endTrip(s, activeTrip.id) : s
+      return startTrip(ended, tripTypeId, plan)
     })
     setSheetOpen(false)
     openChecklist()
   }
 
   const handleToggle = (itemId: string) => {
-    if (!activeForSelected) return
+    if (!activeTrip) return
     if (!checkedIds.has(itemId) && packed + 1 === items.length) {
       setShowComplete(true)
     }
-    update((s) => toggleItemChecked(s, activeForSelected.id, itemId))
+    update((s) => toggleItemChecked(s, activeTrip.id, itemId))
   }
 
   const handleSetChecked = (itemIds: string[], checked: boolean) => {
-    if (!activeForSelected) return
+    if (!activeTrip) return
     const newlyPacked = checked ? itemIds.filter((id) => !checkedIds.has(id)).length : 0
     if (newlyPacked > 0 && packed + newlyPacked === items.length) {
       setShowComplete(true)
     }
-    update((s) => setItemsChecked(s, activeForSelected.id, itemIds, checked))
+    update((s) => setItemsChecked(s, activeTrip.id, itemIds, checked))
   }
 
   const handleAddItem = (input: { categoryId: string; label: string }): string | null => {
     const existing = findItemByIdentity(state, {
-      tripTypeId: selectedTypeId,
+      tripTypeId: selectedType.id,
       categoryId: input.categoryId,
       label: input.label,
     })
     if (existing) {
-      if (activeForSelected && !checkedIds.has(existing.id)) {
-        update((s) => setItemsChecked(s, activeForSelected.id, [existing.id], true), { flush: true })
+      if (activeTrip && !checkedIds.has(existing.id)) {
+        update((s) => setItemsChecked(s, activeTrip.id, [existing.id], true), { flush: true })
       }
       return null
     }
     const payload = {
       ...input,
-      tripTypeId: selectedTypeId,
+      tripTypeId: selectedType.id,
       id: newCustomItemId(input.categoryId),
     }
     const preview = addCatalogItem(state, payload)
@@ -226,7 +226,7 @@ function App() {
       screen = (
         <ChecklistScreen
           tripType={selectedType}
-          activeTrip={activeForSelected}
+          activeTrip={activeTrip}
           categories={categories}
           items={items}
           checkedIds={checkedIds}
@@ -254,7 +254,7 @@ function App() {
           categories={categories}
           items={items}
           checkedIds={checkedIds}
-          tracking={Boolean(activeForSelected)}
+          tracking={Boolean(activeTrip)}
           onBack={() => navigate('home')}
           onOpenCategory={(id) => openChecklist({ category: id })}
         />
@@ -298,7 +298,7 @@ function App() {
         <HomeScreen
           teamName={team.name}
           tripType={selectedType}
-          activeTrip={activeForSelected}
+          activeTrip={activeTrip}
           packed={packed}
           total={items.length}
           onOpenChecklist={() => openChecklist()}
@@ -316,7 +316,7 @@ function App() {
   }
 
   return (
-    <div className="app" data-trip-type={selectedTypeId}>
+    <div className="app" data-trip-type={selectedType.id}>
       {syncError && (
         <p className="sync-banner" role="status">
           Sync issue: {syncError}
@@ -334,22 +334,22 @@ function App() {
         view={view}
         onNavigate={(next) => (next === 'checklist' ? openChecklist() : navigate(next))}
         onPlus={() => openTripSheet()}
-        plusLabel={activeForSelected ? 'Manage trip' : 'Start a trip'}
+        plusLabel={activeTrip ? 'Manage trip' : 'Start a trip'}
       />
 
       {sheetOpen && (
         <TripSheet
-          key={`${sheetMode ?? 'auto'}-${activeForSelected?.id ?? 'none'}`}
+          key={`${sheetMode ?? 'auto'}-${activeTrip?.id ?? 'none'}`}
           tripTypes={tripTypes}
-          selectedTypeId={selectedTypeId}
+          selectedTypeId={viewingTypeId}
           onSelectType={setSelectedTypeId}
-          activeTrip={activeForSelected}
+          activeTrip={activeTrip}
           typeName={selectedType.name}
           initialMode={sheetMode}
           onStart={handleStart}
           onUpdate={handleUpdateTrip}
           onEnd={() => {
-            if (activeForSelected) update((s) => endTrip(s, activeForSelected.id))
+            if (activeTrip) update((s) => endTrip(s, activeTrip.id))
             setSheetOpen(false)
           }}
           onStartNext={handleStartNext}

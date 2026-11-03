@@ -10,6 +10,7 @@ export function categoryLabel(cat: MasterCategory): string {
 }
 
 const CATEGORY_RULES: [RegExp, ArtName, string][] = [
+  [/fly|flying|airport|tsa/i, 'paper', 'Flying'],
   [/camp|tent|shelter|sleep/i, 'tent', 'Shelter & Sleeping'],
   [/food|cook|kitchen/i, 'mug', 'Cooking & Food'],
   [/cloth|apparel/i, 'jacket', 'Clothing'],

@@ -99,7 +99,7 @@ export function HomeScreen({
           <TripCard trip={null} title="No trip underway" dates="Ready when you are">
             <button type="button" className="btn btn-primary trip-card-cta" onClick={onStartTrip}>
               <UiIcon name="plus" size={18} strokeWidth={2.4} />
-              Start {tripType.name.toLowerCase()}
+              Start a trip
             </button>
           </TripCard>
         )}

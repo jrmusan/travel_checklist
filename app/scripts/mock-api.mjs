@@ -58,6 +58,9 @@ createServer(async (req, res) => {
   const team = sessionTeam(req)
 
   switch (route) {
+    case 'GET /health':
+      return send(res, 200, { ok: true })
+
     case 'GET /api/auth/me':
       return team
         ? send(res, 200, { team: { id: team.id, name: team.name } })

@@ -11,6 +11,7 @@
     "vercel-build": "npm run db:migrate && npm run build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "test:e2e": "playwright test",
     "db:migrate": "node scripts/migrate.mjs",
     "db:migrate:check": "node scripts/migrate.mjs --check"
   },
@@ -28,6 +29,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "@playwright/test": "^1.56.1",
     "oxlint": "^1.88.0",
     "pg": "^8.16.3",
     "typescript": "~6.0.3",

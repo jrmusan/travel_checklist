@@ -6,14 +6,14 @@ React app (`app/`) for packing lists organized by **trip type**, with a shared *
 
 ### Trip types
 
-A trip type is a first-class category of travel (e.g. `camper`, later `air_travel`). Each type has:
+A trip type is a first-class category of travel (e.g. `camper`, `airplane`). Each type has:
 
 - Metadata (`TripTypeDefinition`): id, slug, name, icon, description
 - A **master pool** slice: categories and items scoped by `tripTypeId`
 
 Trip types are registered in `app/src/trip-types/registry.ts`. The UI lists types from that registry — it does not assume a single type.
 
-**Today:** only `camper` is registered, seeded from `checklists/camping-essentials.md`.
+**Registered types:** `camper` (`checklists/camping-essentials.md`) and `airplane` (`checklists/airplane-essentials.md`). Airplane items use their own ids (`airplane:…`) so catalog edits never leak between types. `removedItemIds` is a single array of those namespaced ids.
 
 ### Master pool vs trip instances
 
@@ -58,16 +58,14 @@ Trip progress is **not** kept in `localStorage` after team auth is enabled — i
 - **Still to pack** filter hides checked items while that filter is active.
 - Categories are **collapsible**; collapsed headers show progress (`packed/total`).
 
-## Adding a second trip type
+## Adding another trip type
 
-1. Add markdown (optional) under `checklists/`, e.g. `air-travel-essentials.md`.
-2. Create `app/src/trip-types/air-travel.ts`:
-   - Export `TripTypeDefinition` (id e.g. `air_travel`)
-   - Export `loadAirTravelMasterPool()` using `parseMarkdownToMasterPool` or a static list
-3. Register the entry in `app/src/trip-types/registry.ts` (`ENTRIES` array).
-4. If the persisted schema changes, increment `SCHEMA_VERSION` and extend migration logic in `app/src/store/persistence.ts` and server state normalization in `app/api/_lib/db.ts`.
+1. Add markdown under `checklists/`.
+2. Create `app/src/trip-types/<slug>.ts` with a `TripTypeDefinition` and `load…MasterPool()` via `parseMarkdownToMasterPool`.
+3. Register the entry in `app/src/trip-types/registry.ts`.
+4. If the persisted schema changes, increment `SCHEMA_VERSION` and extend migration logic.
 
-No UI changes are required beyond the registry — the trip type picker and pack view already key off `tripTypeId`.
+The start-trip sheet lists every registered type; a type must be picked before starting. Home and checklist badges show Camper vs Airplane from the active trip.
 
 ## Source layout
 

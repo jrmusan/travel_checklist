@@ -1,6 +1,6 @@
 # Joey's Travel Checklists
 
-Personal travel packing checklists by **trip type** (camper today, more types later). A **master item pool** defines everything you might pack; **each new trip starts with nothing checked** so you get a clean slate every time.
+Personal travel packing checklists by **trip type** (camper and airplane). A **master item pool** defines everything you might pack; **each new trip starts with nothing checked** so you get a clean slate every time.
 
 **Trip teams** sign in with a shared **team name + password** so everyone on the crew sees the same packing progress across devices.
 

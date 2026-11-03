@@ -147,14 +147,19 @@ export function ChecklistScreen({
   const packed = items.filter((i) => checkedIds.has(i.id)).length
   const pct = percent(packed, total)
 
-  const subtitle = activeTrip ? tripScheduleLabel(activeTrip) : 'No trip underway'
+  const schedule = activeTrip ? tripScheduleLabel(activeTrip) : 'No trip underway'
   const heading = activeTrip ? tripDisplayName(activeTrip, tripType.name) : tripType.name
 
   return (
     <div className="screen screen--checklist">
       <ScreenHeader
         title={heading}
-        subtitle={subtitle}
+        subtitle={
+          <>
+            <span className="trip-type-badge">{tripType.name}</span>
+            <span> · {schedule}</span>
+          </>
+        }
         onBack={onBack}
         action={<RefreshButton onClick={onRefresh} busy={refreshing} />}
       >

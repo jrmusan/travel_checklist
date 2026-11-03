@@ -22,7 +22,7 @@ export function startTrip(
   }
 
   const nextTrips = state.trips.map((t) =>
-    t.tripTypeId === tripTypeId && t.status === 'active'
+    t.status === 'active'
       ? { ...t, status: 'ended' as const, endedAt: new Date().toISOString() }
       : t,
   )
