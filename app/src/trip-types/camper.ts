@@ -5,7 +5,7 @@ import type { MasterPool, TripTypeDefinition } from '../types'
 export const camperTripType: TripTypeDefinition = {
   id: 'camper',
   slug: 'camper',
-  name: 'Camper trip',
+  name: 'Camper',
   icon: '🏕️',
   description: 'Camping essentials — clothes, gear, family, and misc.',
 }

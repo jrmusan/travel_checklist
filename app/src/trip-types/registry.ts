@@ -1,4 +1,5 @@
 import type { MasterPool, TripTypeDefinition, TripTypeId } from '../types'
+import { airplaneTripType, loadAirplaneMasterPool } from './airplane'
 import { camperTripType, loadCamperMasterPool } from './camper'
 
 export interface TripTypeRegistryEntry {
@@ -11,6 +12,10 @@ const ENTRIES: TripTypeRegistryEntry[] = [
   {
     definition: camperTripType,
     loadMasterPool: loadCamperMasterPool,
+  },
+  {
+    definition: airplaneTripType,
+    loadMasterPool: loadAirplaneMasterPool,
   },
 ]
 

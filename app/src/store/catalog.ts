@@ -30,6 +30,7 @@ export function findItemByIdentity(
   )
 }
 
+/** Merge team catalog with seeded pools. Item ids are namespaced by trip type (`camper:…`, `airplane:…`), so a removal only affects that type. */
 export function mergeMasterPool(
   existing: MasterPool,
   seeded: MasterPool,

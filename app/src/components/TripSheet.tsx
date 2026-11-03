@@ -18,14 +18,14 @@ import { UiIcon } from './icons/UiIcon'
 
 interface TripSheetProps {
   tripTypes: TripTypeDefinition[]
-  selectedTypeId: TripTypeId
+  selectedTypeId: TripTypeId | null
   onSelectType: (id: TripTypeId) => void
   activeTrip: TripInstance | null
   typeName: string
-  onStart: (plan: TripPlan) => void
+  onStart: (plan: TripPlan, tripTypeId: TripTypeId) => void
   onUpdate: (plan: TripPlan) => void
   onEnd: () => void
-  onStartNext: (plan: TripPlan) => void
+  onStartNext: (plan: TripPlan, tripTypeId: TripTypeId) => void
   onClose: () => void
   /** When true, skip manage view and open the composer (hero edit / start next). */
   initialMode?: 'manage' | 'create' | 'edit' | 'next'
@@ -61,6 +61,9 @@ export function TripSheet({
   const [form, setForm] = useState(() =>
     emptyForm(initialMode === 'edit' ? activeTrip : null),
   )
+  const [draftTypeId, setDraftTypeId] = useState<TripTypeId | null>(() =>
+    initialMode === 'edit' ? selectedTypeId : null,
+  )
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -74,7 +77,7 @@ export function TripSheet({
     }
   }, [onClose])
 
-  const selected = tripTypes.find((t) => t.id === selectedTypeId)
+  const selected = tripTypes.find((t) => t.id === draftTypeId)
   const nights = useMemo(() => {
     try {
       return nightsBetween(form.startDate, form.endDate)
@@ -107,9 +110,16 @@ export function TripSheet({
       setError(plan)
       return
     }
-    if (mode === 'edit') onUpdate(plan)
-    else if (mode === 'next') onStartNext(plan)
-    else onStart(plan)
+    if (mode === 'edit') {
+      onUpdate(plan)
+      return
+    }
+    if (!draftTypeId) {
+      setError('Pick Camper or Airplane.')
+      return
+    }
+    if (mode === 'next') onStartNext(plan, draftTypeId)
+    else onStart(plan, draftTypeId)
   }
 
   const title =
@@ -154,6 +164,7 @@ export function TripSheet({
                 onClick={() => {
                   setForm(emptyForm(null))
                   setError(null)
+                  setDraftTypeId(null)
                   setMode('next')
                 }}
               >
@@ -173,8 +184,37 @@ export function TripSheet({
                 ? 'Name the next trip. Packing starts unchecked.'
                 : mode === 'edit'
                   ? 'Updates sync to everyone on the trip team.'
-                  : 'Where are you going? Every item starts unchecked.'}
+                  : 'Pick Camper or Airplane, then name the trip. Every item starts unchecked.'}
             </p>
+
+            <div className="type-list" role="radiogroup" aria-label="Trip type">
+              {tripTypes.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={t.id === draftTypeId}
+                  className="type-option"
+                  onClick={() => {
+                    setError(null)
+                    setDraftTypeId(t.id)
+                    onSelectType(t.id)
+                  }}
+                  disabled={mode === 'edit'}
+                >
+                  <span className="type-option-icon" aria-hidden>
+                    {t.icon}
+                  </span>
+                  <span className="type-option-text">
+                    <strong>{t.name}</strong>
+                    <small>{t.description}</small>
+                  </span>
+                  <span className="check-dot" aria-hidden>
+                    {t.id === draftTypeId && <UiIcon name="check" size={16} strokeWidth={3} />}
+                  </span>
+                </button>
+              ))}
+            </div>
 
             <label className="field">
               <span>Destination / trip name</span>
@@ -241,31 +281,6 @@ export function TripSheet({
                 : 'Pick dates to see the trip length.'}
             </p>
 
-            <div className="type-list" role="radiogroup" aria-label="Trip type">
-              {tripTypes.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={t.id === selectedTypeId}
-                  className="type-option"
-                  onClick={() => onSelectType(t.id)}
-                  disabled={mode === 'edit'}
-                >
-                  <span className="type-option-icon" aria-hidden>
-                    {t.icon}
-                  </span>
-                  <span className="type-option-text">
-                    <strong>{t.name}</strong>
-                    <small>{t.description}</small>
-                  </span>
-                  <span className="check-dot" aria-hidden>
-                    {t.id === selectedTypeId && <UiIcon name="check" size={16} strokeWidth={3} />}
-                  </span>
-                </button>
-              ))}
-            </div>
-
             {error && (
               <p className="form-error" role="alert">
                 {error}
@@ -273,11 +288,17 @@ export function TripSheet({
             )}
 
             <div className="sheet-actions">
-              <button type="submit" className="btn btn-primary btn-block btn-lg">
+              <button
+                type="submit"
+                className="btn btn-primary btn-block btn-lg"
+                disabled={mode !== 'edit' && !draftTypeId}
+              >
                 <UiIcon name={mode === 'edit' ? 'check' : 'plus'} size={20} strokeWidth={2.4} />
                 {mode === 'edit'
                   ? 'Save trip'
-                  : `Start ${selected?.name.toLowerCase() ?? 'trip'}`}
+                  : selected
+                    ? `Start ${selected.name.toLowerCase()} trip`
+                    : 'Pick a trip type'}
               </button>
               <button type="button" className="btn btn-outline btn-block" onClick={onClose}>
                 Cancel
